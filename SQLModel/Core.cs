@@ -112,9 +112,6 @@ namespace SQLModel
         }
         public void CreateTables()
         {
-            if (!IsAuthenticated) 
-                throw new UnauthorizedAccessException("User is not authenticated. Access denied.");
-
             List<Type> typesList = new List<Type>();
             foreach (var asm in AppDomain.CurrentDomain.GetAssemblies())
             {
@@ -124,23 +121,24 @@ namespace SQLModel
 
             // var types = typeof(BaseModel).Assembly.GetTypes().Where(type => type.IsSubclassOf(typeof(BaseModel)));
 
-            SqlConnection connection = this.OpenConnection();
-
-            // create tables
-            foreach (var type in typesList)
+            using (var session = new SessionMaker(this))
             {
-                if (type.IsSubclassOf(typeof(BaseModel)))
+                // create tables
+                foreach (var type in typesList)
                 {
-                    TableCreator.CreateTable(type, connection);
+                    if (type.IsSubclassOf(typeof(BaseModel)))
+                    {
+                        TableCreator.CreateTable(type, session);
+                    }
                 }
-            }
 
-            // create foreign keys
-            foreach (var type in typesList)
-            {
-                if (type.IsSubclassOf(typeof(BaseModel)))
+                // create foreign keys
+                foreach (var type in typesList)
                 {
-                    TableCreator.CreateForeignKey(type, connection);
+                    if (type.IsSubclassOf(typeof(BaseModel)))
+                    {
+                        TableCreator.CreateForeignKey(type, session);
+                    }
                 }
             }
         }

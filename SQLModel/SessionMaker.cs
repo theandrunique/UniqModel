@@ -9,7 +9,7 @@ using System.Transactions;
 
 namespace SQLModel
 {
-    internal class SessionMaker : CRUD, IDisposable
+    public class SessionMaker : CRUD, IDisposable
     {
         Core dbcore;
         SqlConnection conn;
@@ -59,6 +59,10 @@ namespace SQLModel
         public void Add(object newObject)
         {
             CRUD.Create(newObject, conn);
+        }
+        public void Execute(string query)
+        {
+            Core.ExecuteEmptyQuery(query, conn);
         }
     }
 }

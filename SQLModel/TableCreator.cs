@@ -2,19 +2,30 @@
 using System.Data.SqlClient;
 using System.Diagnostics.Eventing.Reader;
 using System.Reflection;
-using static SQLModel.Core;
 
 namespace SQLModel
 {
     public class TableCreator
     {
-        public static void CreateTable(Type type, SqlConnection conn)
+        public static void CreateTable(Type type, SessionMaker session)
         {
             string createTableQuery = TableCreator.GenerateCreateTableQuery(type);
-            Console.WriteLine(createTableQuery);
-            //SqlCommand command = new SqlCommand(createTableQuery, conn);
-            //command.ExecuteNonQuery();
 
+            session.Execute(createTableQuery);
+        }
+        public static void CreateForeignKey(Type type, SessionMaker session)
+        {
+            PropertyInfo[] properties = type.GetProperties();
+            
+            foreach(PropertyInfo property in properties)
+            {
+                var foreignKeyAttribute = (ForeignKeyAttribute)property.GetCustomAttribute(typeof(ForeignKeyAttribute));
+                if (foreignKeyAttribute != null)
+                {
+                    string query = GenerateAddForeignKeyQuery(type, property, foreignKeyAttribute);
+                    session.Execute(query);
+                }
+            }
         }
         private static string GenerateCreateTableQuery(Type type)
         {
@@ -47,24 +58,10 @@ namespace SQLModel
                 }
 
             }
-            createTableQuery = createTableQuery.TrimEnd(',', ' ') + ")";
+            createTableQuery = createTableQuery.TrimEnd(',', ' ') + ");";
             return createTableQuery;
         }
 
-        public static void CreateForeignKey(Type type, SqlConnection conn)
-        {
-            PropertyInfo[] properties = type.GetProperties();
-            
-            foreach(PropertyInfo property in properties)
-            {
-                var foreignKeyAttribute = (ForeignKeyAttribute)property.GetCustomAttribute(typeof(ForeignKeyAttribute));
-                if (foreignKeyAttribute != null)
-                {
-                    string query = GenerateAddForeignKeyQuery(type, property, foreignKeyAttribute);
-                    Console.WriteLine(query);
-                }
-            }
-        }
         private static string GenerateAddForeignKeyQuery(Type type, PropertyInfo property, ForeignKeyAttribute foreignKeyAttribute)
         {
             var tableAttribute = (TableAttribute)type.GetCustomAttribute(typeof(TableAttribute));
@@ -77,7 +74,7 @@ namespace SQLModel
             return $"ALTER TABLE {tableAttribute.TableName} " +
                 $"ADD CONSTRAINT FK_{tableAttribute.TableName}_{foreignKeyAttribute.ReferenceTableName} " +
                 $"FOREIGN KEY ({foreignKeyAttribute.ColumnName}) " +
-                $"REFERENCES {tableAttribute.TableName} ( {foreignKeyAttribute.ReferenceTableName})";
+                $"REFERENCES {tableAttribute.TableName} ( {foreignKeyAttribute.ReferenceTableName});";
         }
 
         private static string GetSqlType(Type propertyType)
