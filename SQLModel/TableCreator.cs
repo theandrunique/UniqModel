@@ -11,7 +11,7 @@ namespace SQLModel
         {
             string createTableQuery = TableCreator.GenerateCreateTableQuery(type);
 
-            session.Execute(createTableQuery);
+            session.ExecuteNonQuery(createTableQuery);
         }
         public static void CreateForeignKey(Type type, Session session)
         {
@@ -23,7 +23,7 @@ namespace SQLModel
                 if (foreignKeyAttribute != null)
                 {
                     string query = GenerateAddForeignKeyQuery(type, property, foreignKeyAttribute);
-                    session.Execute(query);
+                    session.ExecuteNonQuery(query);
                 }
             }
         }
@@ -73,7 +73,7 @@ namespace SQLModel
             return $"ALTER TABLE {tableAttribute.TableName} " +
                 $"ADD CONSTRAINT FK_{tableAttribute.TableName}_{foreignKeyAttribute.ReferenceTableName} " +
                 $"FOREIGN KEY ({foreignKeyAttribute.ColumnName}) " +
-                $"REFERENCES {tableAttribute.TableName} ( {foreignKeyAttribute.ReferenceTableName});";
+                $"REFERENCES {foreignKeyAttribute.ReferenceTableName} ( {foreignKeyAttribute.ReferenceFieldName});";
         }
 
         //private static string GetSqlType(Type propertyType)

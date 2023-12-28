@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Data.SqlClient;
+using System.Runtime.Remoting.Messaging;
 
 namespace SQLModel
 {
@@ -10,6 +11,8 @@ namespace SQLModel
         SqlConnection conn;
         SqlTransaction transaction;
         bool expired = false;
+
+        List<SqlDataReader> readerPool = new List<SqlDataReader>();
         // static uint transactionСounter;
         public Session(Core dbcore)
         {
@@ -31,15 +34,21 @@ namespace SQLModel
         }
         public void Dispose()
         {
+            foreach (var reader in readerPool)
+            {
+                if (reader != null)
+                {
+                    reader.Close();
+                }
+            }
             try
             {
                 transaction.Commit();
                 Logger.Info($"COMMIT");
-
             }
             catch (Exception ex)
             {
-                Logger.Info($"ROLLBACK");
+                Logger.Info($"ROLLBACK ({ex.Message})");
                 // transaction.Rollback();
                 // throw;
             }
@@ -115,7 +124,9 @@ namespace SQLModel
         {
             try
             {
-               return dbcore.ExecuteQuery(query, conn, transaction);
+                SqlDataReader reader = dbcore.ExecuteQuery(query, conn, transaction);
+                readerPool.Add(reader);
+                return reader;
             }
             catch { expired = true; return null; }
         }
