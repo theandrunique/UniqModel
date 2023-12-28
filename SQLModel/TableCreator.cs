@@ -5,15 +5,15 @@ using System.Reflection;
 
 namespace SQLModel
 {
-    public class TableCreator
+    internal class TableCreator
     {
-        public static void CreateTable(Type type, SessionMaker session)
+        public static void CreateTable(Type type, Session session)
         {
             string createTableQuery = TableCreator.GenerateCreateTableQuery(type);
 
             session.Execute(createTableQuery);
         }
-        public static void CreateForeignKey(Type type, SessionMaker session)
+        public static void CreateForeignKey(Type type, Session session)
         {
             PropertyInfo[] properties = type.GetProperties();
             
@@ -36,7 +36,7 @@ namespace SQLModel
                 throw new ArgumentException("The class must be marked with TableAttribute.");
             }
 
-            string createTableQuery = $"CREATE TABLE IF NOT EXISTS {tableAttribute.TableName} (";
+            string createTableQuery = $"CREATE TABLE {tableAttribute.TableName} (";
 
             PropertyInfo[] properties = type.GetProperties();
 
@@ -47,8 +47,8 @@ namespace SQLModel
                 if (fieldAttribute is PrimaryKeyAttribute)
                 {
                     createTableQuery += $"{fieldAttribute.ColumnName} {fieldAttribute.ColumnType} IDENTITY(1,1) PRIMARY KEY, ";
-                } else
-                if (fieldAttribute is FieldAttribute)
+                } 
+                else if (fieldAttribute is FieldAttribute)
                 {
                     createTableQuery += $"{fieldAttribute.ColumnName} {fieldAttribute.ColumnType}, ";
                 }
@@ -56,7 +56,6 @@ namespace SQLModel
                 {
                     createTableQuery += $"{fieldAttribute.ColumnName} {fieldAttribute.ColumnType}, ";
                 }
-
             }
             createTableQuery = createTableQuery.TrimEnd(',', ' ') + ");";
             return createTableQuery;
@@ -77,18 +76,18 @@ namespace SQLModel
                 $"REFERENCES {tableAttribute.TableName} ( {foreignKeyAttribute.ReferenceTableName});";
         }
 
-        private static string GetSqlType(Type propertyType)
-        {
-            if (propertyType == typeof(int))
-            {
-                return "INT";
-            }
-            else if (propertyType == typeof(string))
-            {
-                return "NVARCHAR(MAX)";
-            }
+        //private static string GetSqlType(Type propertyType)
+        //{
+        //    if (propertyType == typeof(int))
+        //    {
+        //        return "INT";
+        //    }
+        //    else if (propertyType == typeof(string))
+        //    {
+        //        return "NVARCHAR(MAX)";
+        //    }
 
-            throw new NotSupportedException($"Type {propertyType.Name} is not supported.");
-        }
+        //    throw new NotSupportedException($"Type {propertyType.Name} is not supported.");
+        //}
     }
 }

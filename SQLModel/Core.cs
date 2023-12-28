@@ -9,59 +9,70 @@ using System.Threading.Tasks;
 
 namespace SQLModel
 {
-    public partial class Core
+    public class Core
     {
-        private string databaseName;
-        private string ip;
-        public bool IsAuthenticated = false;
-
-        private string username;
-        private string password;
+        // public bool IsAuthenticated = false;
 
         private string connectionString;
-
+        
         // private static string connectionStringWindows = $"Server=localhost;Database={databaseName};Trusted_Connection=True;";
 
-
-        public Core(string databaseName, string ip = "localhost")
+        public Core(string connectionString, bool createTables = false, bool logging = false, string logfileName = "orm.log")
         {
-            this.databaseName = databaseName;
-            this.ip = ip;
-            // connectionString = $"Server={ip};Database={databaseName};User ID={username};Password={password};";
-        }
-        public async Task AuthenticateAsync(string password, string username = "sa")
-        {
-            this.username = username;
-            this.password = password;
-            string connectionStringTemp = $"Server={ip};Database={databaseName};User ID={username};Password={password};";
-            try
+            this.connectionString = connectionString;
+            if (logging)
             {
-                var connection = await OpenConnectionAsync(connectionStringTemp);
-                connection.Close();
-                IsAuthenticated = true;
-                this.connectionString = $"Server={ip};Database={databaseName};User ID={username};Password={password};";
+                Logger.isEnabled = logging;
+                Logger.logfileName = logfileName;
             }
-            catch (Exception ex) { throw ex; }
+            if (createTables)
+            {
+                CreateTables();
+            }
+            CheckExistedTables();
         }
+        //public void AuthenticateSync(string password, string username = "sa")
+        //{
+        //    this.username = username;
+        //    this.password = password;
+        //    string connectionStringTemp = $"Server={ip};Database={databaseName};User ID={username};Password={password};Trusted_Connection=True;";
+        //    try
+        //    {
+        //        var connection = OpenConnection(connectionStringTemp);
+        //        connection.Close();
+        //        IsAuthenticated = true;
+        //        this.connectionString = $"Server={ip};Database={databaseName};User ID={username};Password={password};Trusted_Connection=True;";
+        //    }
+        //    catch (Exception ex) { throw ex; }
+        //}
+        //public async Task AuthenticateAsync(string password, string username = "sa")
+        //{
+        //    this.username = username;
+        //    this.password = password;
+        //    string connectionStringTemp = $"Server={ip};Database={databaseName};User ID={username};Password={password};Trusted_Connection=True;";
+        //    try
+        //    {
+        //        var connection = await OpenConnectionAsync(connectionStringTemp);
+        //        connection.Close();
+        //        IsAuthenticated = true;
+        //        this.connectionString = $"Server={ip};Database={databaseName};User ID={username};Password={password};Trusted_Connection=True;";
+        //    }
+        //    catch (Exception ex) { throw ex; }
+        //}
 
-        public void Disconnect()
+        //public void Disconnect()
+        //{
+        //    IsAuthenticated = false;
+        //    connectionString = string.Empty;
+        //    username = string.Empty;
+        //    password = string.Empty;
+        //}
+        public async Task<SqlConnection> OpenConnectionAsync()
         {
-            IsAuthenticated = false;
-            connectionString = string.Empty;
-            username = string.Empty;
-            password = string.Empty;
-        }
-        public async Task<SqlConnection> OpenConnectionAsync(string connectionStringTemp = null)
-        {
-            SqlConnection connection;
-            if (!IsAuthenticated)
-                connection = new SqlConnection(connectionStringTemp);
-            else
-                connection = new SqlConnection(this.connectionString);
+            SqlConnection connection = new SqlConnection(this.connectionString);
             try
             {
                 await connection.OpenAsync();
-
             }
             catch (Exception ex)
             {
@@ -69,75 +80,130 @@ namespace SQLModel
             }
             return connection;
         }
-        public SqlConnection OpenConnection(string connectionStringTemp = null)
+        public SqlConnection OpenConnection()
         {
-            SqlConnection connection;
-            if (!IsAuthenticated)
-                connection = new SqlConnection(connectionStringTemp);
-            else
-                connection = new SqlConnection(connectionString);
-
+            SqlConnection connection = new SqlConnection(connectionString);
             connection.Open();
             return connection;
         }
 
-        public static SqlDataReader ExecuteQuery(string sql, SqlConnection connection)
+        public SqlDataReader ExecuteQuery(string sql, SqlConnection connection, SqlTransaction transaction)
         {
-            SqlCommand command = new SqlCommand(sql, connection);
-            return command.ExecuteReader();
-        }
-
-        public static void ExecuteEmptyQuery(string sql, SqlConnection connection)
-        {
-            using (SqlCommand command = new SqlCommand(sql, connection))
+            SqlCommand command = new SqlCommand(sql, connection, transaction);
+            try
             {
-                command.ExecuteNonQuery();
+                Logger.Info($"{sql}");
+
+                return command.ExecuteReader();
+            }
+            catch (Exception ex)
+            {
+                Logger.Error($"{sql} Details: {ex.Message}");
+                throw;
             }
         }
-        public List<object> GetForeignKeyValues(string referenceTableName, string referenceFieldName)
+
+        public void ExecuteEmptyQuery(string sql, SqlConnection connection, SqlTransaction transaction)
+        {
+            using (SqlCommand command = new SqlCommand(sql, connection, transaction))
+            {
+                try
+                {
+                    Logger.Info($"{sql}");
+                    command.ExecuteNonQuery();
+                }
+                catch (Exception ex)
+                {
+                    Logger.Error($"{sql} Details: {ex.Message}");
+                    throw;
+                }
+            }
+        }
+        public List<object> GetForeignKeyValues(string referenceTableName, Session session, string referenceFieldName = "id")
         {
             List<object> values = new List<object>();
 
-            SqlConnection connection = this.OpenConnection();
-
             string query = $"SELECT DISTINCT {referenceFieldName} FROM {referenceTableName};";
 
-            SqlDataReader reader = Core.ExecuteQuery(query, connection);
-            while (reader.Read())
+            using (SqlDataReader reader = session.Execute(query))
             {
-                values.Add(reader[0]);
+                while (reader.Read())
+                {
+                    values.Add(reader[referenceFieldName]);
+                }
+                return values;
             }
-
-            return values;
         }
-        public void CreateTables()
+        public Session CreateSession()
+        {
+            return new Session(this);
+        }
+        private void CreateTables()
+        {
+            List<Type> typesList = GetBaseModelTypes();
+
+            // var types = typeof(BaseModel).Assembly.GetTypes().Where(type => type.IsSubclassOf(typeof(BaseModel)));
+
+            // create tables
+            foreach (var type in typesList)
+            {
+                using (var session = new Session(this))
+                {
+                    TableCreator.CreateTable(type, session);
+                }
+            }
+            // create foreign keys
+            foreach (var type in typesList)
+            {
+                using (var session = new Session(this))
+                {
+                    TableCreator.CreateForeignKey(type, session);
+                }
+            }
+        }
+        private void CheckExistedTables()
+        {
+            List<Type> typesList = GetBaseModelTypes();
+
+            foreach (var type in typesList)
+            {
+                var tableAttribute = (TableAttribute)type.GetCustomAttribute(typeof(TableAttribute));
+                if (tableAttribute == null)
+                {
+                    throw new ArgumentException("The class must be marked with TableAttribute.");
+                }
+                if (!TableExists(tableAttribute.TableName, this))
+                    throw new Exception($"Table {tableAttribute.TableName} does not exists");
+            }
+        }
+        static List<Type> GetBaseModelTypes()
         {
             List<Type> typesList = new List<Type>();
+
             foreach (var asm in AppDomain.CurrentDomain.GetAssemblies())
             {
                 var types = asm.GetTypes().Where(type => type.BaseType == typeof(BaseModel));
                 typesList.AddRange(types);
             }
 
-            // var types = typeof(BaseModel).Assembly.GetTypes().Where(type => type.IsSubclassOf(typeof(BaseModel)));
-
-            using (var session = new SessionMaker(this))
+            return typesList;
+        }
+        static bool TableExists(string tableName, Core dbcore)
+        {
+            using (SqlConnection connection = dbcore.OpenConnection())
             {
-                // create tables
-                foreach (var type in typesList)
+                using (SqlCommand command = new SqlCommand($"SELECT 1 FROM {tableName} WHERE 1=0", connection))
                 {
-                    if (type.IsSubclassOf(typeof(BaseModel)))
+                    try
                     {
-                        TableCreator.CreateTable(type, session);
+                        command.ExecuteNonQuery();
+                        Logger.Info($"Table {tableName} is verified");
+                        return true;
                     }
-                }
-
-                // create foreign keys
-                foreach (var type in typesList)
-                {
-                    if (type.IsSubclassOf(typeof(BaseModel)))
+                    catch (SqlException ex)
                     {
-                        TableCreator.CreateForeignKey(type, session);
+                        Logger.Critical($"Table {tableName} does not exist. Please check the database schema. Detail: {ex.Message}");
+                        return false;
                     }
                 }
             }

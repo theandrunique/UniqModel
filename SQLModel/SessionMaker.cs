@@ -1,39 +1,47 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Data.Common;
 using System.Data.SqlClient;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using System.Transactions;
 
 namespace SQLModel
 {
-    public class SessionMaker : CRUD, IDisposable
+    public class Session : IDisposable
     {
         Core dbcore;
         SqlConnection conn;
         SqlTransaction transaction;
-        public SessionMaker(Core dbcore)
+        bool expired = false;
+        // static uint transactionСounter;
+        public Session(Core dbcore)
         {
             this.dbcore = dbcore;
-            if (!dbcore.IsAuthenticated)
-                throw new UnauthorizedAccessException("User is not authenticated. Access denied.");
 
             conn = dbcore.OpenConnection();
-            transaction = conn.BeginTransaction();
 
+            try
+            {
+                Logger.Info($"BEGIN (implicit)");
+
+                transaction = conn.BeginTransaction();
+            }
+            catch (Exception ex)
+            {
+                Logger.Error($"Error occurred while starting the transaction. Details: {ex.Message}");
+                expired = true;
+            }
         }
         public void Dispose()
         {
             try
             {
                 transaction.Commit();
+                Logger.Info($"COMMIT");
+
             }
             catch (Exception ex)
             {
-                transaction.Rollback();
-                throw;
+                Logger.Info($"ROLLBACK");
+                // transaction.Rollback();
+                // throw;
             }
             finally
             {
@@ -42,27 +50,74 @@ namespace SQLModel
         }
         public T GetById<T>(int id)
         {
-            return CRUD.GetById<T>(id, conn);
+            if (!expired)
+            {
+                return CRUD.GetById<T>(id, this);
+            }
+            else
+            {
+                throw new Exception("The session expired due to an exception");
+            }
         }
         public void Delete(object existedObject)
         {
-            CRUD.Delete(existedObject, conn);
+            if (!expired)
+            {
+                CRUD.Delete(existedObject, this);
+            }
+            else
+            {
+                throw new Exception("The session expired due to an exception");
+            }
         }
-        public List<T> GetAll<T>(int id)
+        public List<T> GetAll<T>()
         {
-            return CRUD.GetAll<T>(conn);
+            if (!expired)
+            {
+                return CRUD.GetAll<T>(conn, this);
+            }
+            else
+            {
+                throw new Exception("The session expired due to an exception");
+            }
         }
         public void Update(object existedObject)
         {
-            CRUD.Update(existedObject, conn);
+            if (!expired)
+            {
+                CRUD.Update(existedObject, this);
+            }
+            else
+            {
+                throw new Exception("The session expired due to an exception");
+            }
         }
         public void Add(object newObject)
         {
-            CRUD.Create(newObject, conn);
+            if (!expired)
+            {
+                CRUD.Create(newObject, this);
+            }
+            else
+            {
+                throw new Exception("The session expired due to an exception");
+            }
         }
-        public void Execute(string query)
+        public void ExecuteNonQuery(string query)
         {
-            Core.ExecuteEmptyQuery(query, conn);
+            try
+            {
+                dbcore.ExecuteEmptyQuery(query, conn, transaction);
+            }
+            catch { expired = true; }
+        }
+        public SqlDataReader Execute(string query)
+        {
+            try
+            {
+               return dbcore.ExecuteQuery(query, conn, transaction);
+            }
+            catch { expired = true; return null; }
         }
     }
 }

@@ -9,117 +9,138 @@ using System.Threading.Tasks;
 
 namespace SQLModel
 {
-    public class CRUD
+    internal class CRUD
     {
-        public static T GetById<T>(int id, SqlConnection conn)
+        public static T GetById<T>(int id, Session session)
         {
             Type type = typeof(T);
             string query = $"SELECT * FROM {GetTableName(type)} WHERE id = {id};";
 
-            SqlDataReader reader = Core.ExecuteQuery(query, conn);
-
-            if (reader.Read())
+            using (SqlDataReader reader = session.Execute(query))
             {
-                T obj = Activator.CreateInstance<T>();
-
-                for (int i = 0; i < reader.FieldCount; i++)
+                if (reader.Read())
                 {
-                    string fieldName = reader.GetName(i);
-                    object value = reader.GetValue(i);
+                    var properties = type.GetProperties();
+                    T obj = Activator.CreateInstance<T>();
+                    foreach (var item in properties)
+                    {
+                        FieldAttribute fieldAttribute = item.GetCustomAttribute<FieldAttribute>();
 
-                    var fieldInfo = type.GetField(fieldName, BindingFlags.Instance | BindingFlags.Public | BindingFlags.IgnoreCase);
-
-                    fieldInfo?.SetValue(obj, value);
+                        if (fieldAttribute != null)
+                        {
+                            item.SetValue(obj, reader[fieldAttribute.ColumnName]);
+                        }
+                    }
                 }
-                return obj;
             }
             return default;
         }
 
-        public static void Create(object newObject, SqlConnection conn)
+        public static void Create(object newObject, Session session)
         {
             Type type = newObject.GetType();
 
-            FieldInfo[] fields = type.GetFields();
+            var fields = type.GetProperties();
 
-            string fieldList = string.Join(", ", fields.Skip(1).Select(field => field.Name.ToLower()));
+            string fieldList = string.Join(", ", fields.Skip(1).Select(field =>
+            {
+                FieldAttribute fieldAttribute = field.GetCustomAttribute<FieldAttribute>();
+
+                if (fieldAttribute != null)
+                {
+                    return fieldAttribute.ColumnName;
+                }
+
+                return null;
+            }).Where(fieldName => fieldName != null));
 
             string valueList = string.Join(", ", fields.Skip(1).Select(field =>
             {
-                var value = field.GetValue(newObject);
-                return field.FieldType == typeof(string) ? $"'{value}'" : value.ToString();
-            }));
+                FieldAttribute fieldAttribute = field.GetCustomAttribute<FieldAttribute>();
+
+                if (fieldAttribute != null)
+                {
+                    var value = field.GetValue(newObject);
+
+                    return (field.PropertyType == typeof(string) || field.PropertyType == typeof(DateTime)) ? $"'{value}'" : value.ToString();
+                }
+
+                return null;
+            }).Where(fieldValue => fieldValue != null));
 
             string query = $"insert into {GetTableName(type)} ({fieldList}) values ({valueList});";
 
-            Core.ExecuteEmptyQuery(query, conn);
+            session.ExecuteNonQuery(query);
         }
-        public static void Update(object existedObject, SqlConnection conn)
+        public static void Update(object existedObject, Session session)
         {
             Type type = existedObject.GetType();
 
-            FieldInfo[] fields = type.GetFields();
-
-            //string valueList = string.Join(", ", fields.Skip(1).Select(field =>
-            //{
-            //    var value = field.GetValue(existedObject);
-            //    return field.FieldType == typeof(string) ? $"'{value}'" : value.ToString();
-            //}));
+            var fields = type.GetProperties();
 
             string setClause = string.Join(", ", fields.Skip(1).Select(field =>
             {
-                if (field.FieldType == typeof(string) || field.FieldType == typeof(DateTime))
-                    return $"{field.Name.ToLower()} = '{field.GetValue(existedObject)}'";
+                FieldAttribute fieldAttribute = field.GetCustomAttribute<FieldAttribute>();
 
-                return $"{field.Name.ToLower()} = {field.GetValue(existedObject)}";
-            }));
+                if (fieldAttribute != null)
+                {
+                    var value = field.GetValue(existedObject);
+
+                    if (field.PropertyType == typeof(string) || field.PropertyType == typeof(DateTime))
+                        return $"{fieldAttribute.ColumnName} = '{field.GetValue(existedObject)}'";
+
+                    return $"{fieldAttribute.ColumnName} = {field.GetValue(existedObject)}";
+                }
+                return null;
+            }).Where(fieldValue => fieldValue != null));
 
             string query = $"UPDATE {GetTableName(type)} SET {setClause} WHERE id = {fields[0].GetValue(existedObject)};";
 
-            Core.ExecuteEmptyQuery(query, conn);
+            session.ExecuteNonQuery(query);
         }
-        public static void Delete(object existedObject, SqlConnection conn)
+        public static void Delete(object existedObject, Session session)
         {
             Type type = existedObject.GetType();
 
-            FieldInfo id = type.GetField("Id");
+            var id = type.GetProperty("Id");
 
             string query = $"DELETE FROM {GetTableName(type)} WHERE id = {id.GetValue(existedObject)};";
 
-            Core.ExecuteEmptyQuery(query, conn);
+            session.ExecuteNonQuery(query);
         }
         private static string GetTableName(Type type)
         {
-            PropertyInfo table = type.GetProperty("TableName");
+            var tableAttribute = (TableAttribute)type.GetCustomAttribute(typeof(TableAttribute));
 
-            return (string)table.GetValue(null);
+            return tableAttribute.TableName;
         }
-        public static List<T> GetAll<T>(SqlConnection conn)
+        public static List<T> GetAll<T>(SqlConnection conn, Session session)
         {
             Type type = typeof(T);
             string query = $"SELECT * FROM {GetTableName(type)};";
-
-            SqlDataReader reader = Core.ExecuteQuery(query, conn);
-
             List<T> list = new List<T>();
 
-            while (reader.Read())
+            using (SqlDataReader reader = session.Execute(query))
             {
-                T obj = Activator.CreateInstance<T>();
-
-                for (int i = 0; i < reader.FieldCount; i++)
+                while (reader.Read())
                 {
-                    string fieldName = reader.GetName(i);
-                    object value = reader.GetValue(i);
+                    T obj = Activator.CreateInstance<T>();
+                    var properties = type.GetProperties();
 
-                    var fieldInfo = type.GetField(fieldName, BindingFlags.Instance | BindingFlags.Public | BindingFlags.IgnoreCase);
+                    foreach (var item in properties)
+                    {
+                        FieldAttribute fieldAttribute = item.GetCustomAttribute<FieldAttribute>();
 
-                    fieldInfo?.SetValue(obj, value);
+                        if (fieldAttribute != null)
+                        {
+                            item.SetValue(obj, reader[fieldAttribute.ColumnName]);
+                        }
+                    }
+                    list.Add(obj);
                 }
-
-                list.Add(obj);
             }
             return list;
+
         }
     }
 }
