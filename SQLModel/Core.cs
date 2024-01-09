@@ -1,10 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Data.Common;
 using System.Data.SqlClient;
 using System.Linq;
 using System.Reflection;
-using System.Text;
 using System.Threading.Tasks;
 
 namespace SQLModel
@@ -17,18 +15,24 @@ namespace SQLModel
         
         // private static string connectionStringWindows = $"Server=localhost;Database={databaseName};Trusted_Connection=True;";
 
-        public Core(string connectionString, bool createTables = false, bool logging = false, string logfileName = "orm.log")
+        public Core(string connectionString, bool createTables = false, bool loggingInFile = false, bool consoleLog = false, string logfileName = "orm.log")
         {
             this.connectionString = connectionString;
-            if (logging)
+            if (loggingInFile)
             {
-                Logger.isEnabled = logging;
-                Logger.logfileName = logfileName;
+                Logger.IsEnabled = loggingInFile;
+                Logger.LogfileName = logfileName;
+            }
+            if (consoleLog)
+            {
+                Logger.IsDebugConsoleOutputEnabled = consoleLog;
+                Logger.InitConsoleDebagLogger();
             }
             if (createTables)
             {
                 CreateTables();
             }
+
             CheckExistedTables();
         }
         //public void AuthenticateSync(string password, string username = "sa")

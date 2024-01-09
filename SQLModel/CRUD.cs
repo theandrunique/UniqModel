@@ -114,7 +114,7 @@ namespace SQLModel
 
             return tableAttribute.TableName;
         }
-        public static List<T> GetAll<T>(SqlConnection conn, Session session)
+        public static List<T> GetAll<T>(Session session)
         {
             Type type = typeof(T);
             string query = $"SELECT * FROM {GetTableName(type)};";

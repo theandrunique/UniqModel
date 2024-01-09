@@ -10,7 +10,7 @@ namespace SQLModel
         Core dbcore;
         SqlConnection conn;
         SqlTransaction transaction;
-        bool expired = false;
+        public bool expired = false;
 
         List<SqlDataReader> readerPool = new List<SqlDataReader>();
         // static uint transactionСounter;
@@ -36,7 +36,7 @@ namespace SQLModel
         {
             foreach (var reader in readerPool)
             {
-                if (reader != null)
+                if (!reader.IsClosed)
                 {
                     reader.Close();
                 }
@@ -83,7 +83,7 @@ namespace SQLModel
         {
             if (!expired)
             {
-                return CRUD.GetAll<T>(conn, this);
+                return CRUD.GetAll<T>(this);
             }
             else
             {
