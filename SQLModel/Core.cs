@@ -24,45 +24,31 @@ namespace SQLModel
             {
                 CreateTables();
             }
-
             CheckExistedTables();
         }
         public async Task<SqlConnection> OpenConnectionAsync()
         {
-            SqlConnection connection = new SqlConnection(this.connectionString);
-            try
-            {
-                await connection.OpenAsync();
-            }
-            catch (Exception ex)
-            {
-                throw ex;
-            }
-            return connection;
+            return await OpenConnectionIternal();
         }
         public SqlConnection OpenConnection()
         {
-            SqlConnection connection = new SqlConnection(connectionString);
-            connection.Open();
+            return OpenConnectionIternal().GetAwaiter().GetResult();
+        }
+        async private Task<SqlConnection> OpenConnectionIternal()
+        {
+            SqlConnection connection = new SqlConnection(this.connectionString);
+            await connection.OpenAsync();
             return connection;
         }
-
         public SqlDataReader ExecuteQuery(string sql, SqlConnection connection, SqlTransaction transaction)
         {
-            SqlCommand command = new SqlCommand(sql, connection, transaction);
-            try
-            {
-                Logging.Info($"{sql}");
-
-                return command.ExecuteReader();
-            }
-            catch (Exception ex)
-            {
-                Logging.Error($"{sql} Details: {ex.Message}");
-                throw;
-            }
+            return ExecuteQueryIternal(sql, connection, transaction).GetAwaiter().GetResult();
         }
         async public Task<SqlDataReader> ExecuteQueryAsync(string sql, SqlConnection connection, SqlTransaction transaction)
+        {
+            return await ExecuteQueryIternal(sql, connection, transaction);
+        }
+        async private Task<SqlDataReader> ExecuteQueryIternal(string sql, SqlConnection connection, SqlTransaction transaction)
         {
             SqlCommand command = new SqlCommand(sql, connection, transaction);
             try
@@ -79,21 +65,13 @@ namespace SQLModel
         }
         public void ExecuteEmptyQuery(string sql, SqlConnection connection, SqlTransaction transaction)
         {
-            using (SqlCommand command = new SqlCommand(sql, connection, transaction))
-            {
-                try
-                {
-                    Logging.Info($"{sql}");
-                    command.ExecuteNonQuery();
-                }
-                catch (Exception ex)
-                {
-                    Logging.Error($"{sql} Details: {ex.Message}");
-                    throw;
-                }
-            }
+            ExecuteEmptyQueryInternal(sql, connection, transaction).Wait();
         }
         async public Task ExecuteEmptyQueryAsync(string sql, SqlConnection connection, SqlTransaction transaction)
+        {
+            await ExecuteEmptyQueryInternal(sql, connection, transaction);
+        }
+        async private Task ExecuteEmptyQueryInternal(string sql, SqlConnection connection, SqlTransaction transaction)
         {
             using (SqlCommand command = new SqlCommand(sql, connection, transaction))
             {
@@ -101,6 +79,7 @@ namespace SQLModel
                 {
                     Logging.Info($"{sql}");
                     await command.ExecuteNonQueryAsync();
+
                 }
                 catch (Exception ex)
                 {

@@ -61,7 +61,7 @@ namespace SQLModel
         {
             if (!expired)
             {
-                return CRUD.GetById<T>(id, this);
+                return Crud.GetById<T>(id, this);
             }
             else
             {
@@ -72,7 +72,7 @@ namespace SQLModel
         {
             if (!expired)
             {
-                CRUD.Delete(existedObject, this);
+                Crud.Delete(existedObject, this);
             }
             else
             {
@@ -83,7 +83,7 @@ namespace SQLModel
         {
             if (!expired)
             {
-                return CRUD.GetAll<T>(this);
+                return Crud.GetAll<T>(this);
             }
             else
             {
@@ -94,7 +94,7 @@ namespace SQLModel
         {
             if (!expired)
             {
-                CRUD.Update(existedObject, this);
+                Crud.Update(existedObject, this);
             }
             else
             {
@@ -105,7 +105,7 @@ namespace SQLModel
         {
             if (!expired)
             {
-                CRUD.Create(newObject, this);
+                Crud.Create(newObject, this);
             }
             else
             {
