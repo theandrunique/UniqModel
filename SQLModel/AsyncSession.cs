@@ -65,47 +65,27 @@ namespace SQLModel
         }
         async public Task<T> GetById<T>(int id)
         {
-            if (expired)
-            {
-                throw new Exception("The session expired due to an exception");
-            }
-
             return await Crud.GetByIdAsync<T>(id, this);
         }
         async public Task Delete(object existedObject)
         {
-            if (expired)
-            {
-                throw new Exception("The session expired due to an exception");
-            }
             await Crud.DeleteAsync(existedObject, this);
         }
         async public  Task<List<T>> GetAll<T>()
         {
-            if (expired)
-            {
-                throw new Exception("The session expired due to an exception");
-            }
             return await Crud.GetAllAsync<T>(this);
         }
         async public Task Update(object existedObject)
         {
-            if (expired)
-            {
-                throw new Exception("The session expired due to an exception");
-            }
             await Crud.UpdateAsync(existedObject, this);
         }
         async public Task Add(object newObject)
         {
-            if (expired)
-            {
-                throw new Exception("The session expired due to an exception");
-            }
             await Crud.CreateAsync(newObject, this);
         }
         async public Task ExecuteNonQuery(string query)
         {
+            CheckIsExpired();
             try
             {
                 await dbcore.ExecuteEmptyQueryAsync(query, conn, transaction);
@@ -114,6 +94,7 @@ namespace SQLModel
         }
         async public Task<SqlDataReader> Execute(string query)
         {
+            CheckIsExpired();
             try
             {
                 SqlDataReader reader = await dbcore.ExecuteQueryAsync(query, conn, transaction);
@@ -121,6 +102,13 @@ namespace SQLModel
                 return reader;
             }
             catch { expired = true; return null; }
+        }
+        public void CheckIsExpired()
+        {
+            if (expired)
+            {
+                throw new Exception("The session is closed or expired due to an exception");
+            }
         }
     }
 }

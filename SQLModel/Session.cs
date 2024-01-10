@@ -17,7 +17,6 @@ namespace SQLModel
         {
             expired = false;
             this.dbcore = dbcore;
-
             conn = dbcore.OpenConnection();
 
             try
@@ -49,8 +48,7 @@ namespace SQLModel
             catch (Exception ex)
             {
                 Logging.Info($"ROLLBACK ({ex.Message})");
-                // transaction.Rollback();
-                // throw;
+                throw ex;
             }
             finally
             {
@@ -59,61 +57,27 @@ namespace SQLModel
         }
         public T GetById<T>(int id)
         {
-            if (!expired)
-            {
-                return Crud.GetById<T>(id, this);
-            }
-            else
-            {
-                throw new Exception("The session expired due to an exception");
-            }
+            return Crud.GetById<T>(id, this);
         }
         public void Delete(object existedObject)
         {
-            if (!expired)
-            {
-                Crud.Delete(existedObject, this);
-            }
-            else
-            {
-                throw new Exception("The session expired due to an exception");
-            }
+            Crud.Delete(existedObject, this);
         }
         public List<T> GetAll<T>()
         {
-            if (!expired)
-            {
-                return Crud.GetAll<T>(this);
-            }
-            else
-            {
-                throw new Exception("The session expired due to an exception");
-            }
+            return Crud.GetAll<T>(this);
         }
         public void Update(object existedObject)
         {
-            if (!expired)
-            {
-                Crud.Update(existedObject, this);
-            }
-            else
-            {
-                throw new Exception("The session expired due to an exception");
-            }
+            Crud.Update(existedObject, this);
         }
         public void Add(object newObject)
         {
-            if (!expired)
-            {
-                Crud.Create(newObject, this);
-            }
-            else
-            {
-                throw new Exception("The session expired due to an exception");
-            }
+            Crud.Create(newObject, this);
         }
         public void ExecuteNonQuery(string query)
         {
+            CheckIsExpired();
             try
             {
                 dbcore.ExecuteEmptyQuery(query, conn, transaction);
@@ -122,6 +86,7 @@ namespace SQLModel
         }
         public SqlDataReader Execute(string query)
         {
+            CheckIsExpired();
             try
             {
                 SqlDataReader reader = dbcore.ExecuteQuery(query, conn, transaction);
@@ -129,6 +94,13 @@ namespace SQLModel
                 return reader;
             }
             catch { expired = true; return null; }
+        }
+        public void CheckIsExpired()
+        {
+            if (expired)
+            {
+                throw new Exception("The session is closed or expired due to an exception");
+            }
         }
     }
 }
