@@ -22,13 +22,13 @@ namespace SQLModel
 
             try
             {
-                Logger.Info($"BEGIN (implicit)");
+                Logging.Info($"BEGIN (implicit)");
 
                 transaction = conn.BeginTransaction();
             }
             catch (Exception ex)
             {
-                Logger.Error($"Error occurred while starting the transaction. Details: {ex.Message}");
+                Logging.Error($"Error occurred while starting the transaction. Details: {ex.Message}");
                 expired = true;
             }
         }
@@ -44,11 +44,11 @@ namespace SQLModel
             try
             {
                 transaction.Commit();
-                Logger.Info($"COMMIT");
+                Logging.Info($"COMMIT");
             }
             catch (Exception ex)
             {
-                Logger.Info($"ROLLBACK ({ex.Message})");
+                Logging.Info($"ROLLBACK ({ex.Message})");
                 // transaction.Rollback();
                 // throw;
             }

@@ -1,9 +1,12 @@
-﻿using System;
+﻿using NLog.Targets;
+using NLog;
+using System;
 using System.Collections.Generic;
 using System.Data.SqlClient;
 using System.Linq;
 using System.Reflection;
 using System.Threading.Tasks;
+using System.IO;
 
 namespace SQLModel
 {
@@ -18,16 +21,13 @@ namespace SQLModel
         public Core(string connectionString, bool createTables = false, bool loggingInFile = false, bool consoleLog = false, string logfileName = "orm.log")
         {
             this.connectionString = connectionString;
-            if (loggingInFile)
+            if (!Directory.Exists("logs"))
             {
-                Logger.IsEnabled = loggingInFile;
-                Logger.LogfileName = logfileName;
+                Directory.CreateDirectory("logs");
             }
-            if (consoleLog)
-            {
-                Logger.IsDebugConsoleOutputEnabled = consoleLog;
-                Logger.InitConsoleDebagLogger();
-            }
+
+            Logging.INIT(loggingInFile, consoleLog);
+
             if (createTables)
             {
                 CreateTables();
@@ -96,13 +96,13 @@ namespace SQLModel
             SqlCommand command = new SqlCommand(sql, connection, transaction);
             try
             {
-                Logger.Info($"{sql}");
+                Logging.Info($"{sql}");
 
                 return command.ExecuteReader();
             }
             catch (Exception ex)
             {
-                Logger.Error($"{sql} Details: {ex.Message}");
+                Logging.Error($"{sql} Details: {ex.Message}");
                 throw;
             }
         }
@@ -113,12 +113,12 @@ namespace SQLModel
             {
                 try
                 {
-                    Logger.Info($"{sql}");
+                    Logging.Info($"{sql}");
                     command.ExecuteNonQuery();
                 }
                 catch (Exception ex)
                 {
-                    Logger.Error($"{sql} Details: {ex.Message}");
+                    Logging.Error($"{sql} Details: {ex.Message}");
                     throw;
                 }
             }
@@ -201,12 +201,12 @@ namespace SQLModel
                     try
                     {
                         command.ExecuteNonQuery();
-                        Logger.Info($"Table {tableName} is verified");
+                        Logging.Info($"Table {tableName} is verified");
                         return true;
                     }
                     catch (SqlException ex)
                     {
-                        Logger.Critical($"Table {tableName} does not exist. Please check the database schema. Detail: {ex.Message}");
+                        Logging.Critical($"Table {tableName} does not exist. Please check the database schema. Detail: {ex.Message}");
                         return false;
                     }
                 }
