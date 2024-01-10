@@ -70,7 +70,7 @@ namespace SQLModel
                 throw new Exception("The session expired due to an exception");
             }
 
-            return await AsyncCRUD.GetById<T>(id, this);
+            return await Crud.GetByIdAsync<T>(id, this);
         }
         async public Task Delete(object existedObject)
         {
@@ -78,7 +78,7 @@ namespace SQLModel
             {
                 throw new Exception("The session expired due to an exception");
             }
-            await AsyncCRUD.Delete(existedObject, this);
+            await Crud.DeleteAsync(existedObject, this);
         }
         async public  Task<List<T>> GetAll<T>()
         {
@@ -86,7 +86,7 @@ namespace SQLModel
             {
                 throw new Exception("The session expired due to an exception");
             }
-            return await AsyncCRUD.GetAll<T>(this);
+            return await Crud.GetAllAsync<T>(this);
         }
         async public Task Update(object existedObject)
         {
@@ -94,7 +94,7 @@ namespace SQLModel
             {
                 throw new Exception("The session expired due to an exception");
             }
-            await AsyncCRUD.Update(existedObject, this);
+            await Crud.UpdateAsync(existedObject, this);
         }
         async public Task Add(object newObject)
         {
@@ -102,7 +102,7 @@ namespace SQLModel
             {
                 throw new Exception("The session expired due to an exception");
             }
-            await AsyncCRUD.Create(newObject, this);
+            await Crud.CreateAsync(newObject, this);
         }
         async public Task ExecuteNonQuery(string query)
         {

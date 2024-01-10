@@ -1,4 +1,5 @@
 ﻿using System;
+using System.CodeDom;
 using System.Collections.Generic;
 using System.Data.Common;
 using System.Data.SqlClient;
@@ -6,43 +7,60 @@ using System.Linq;
 using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
+using System.Windows.Documents;
 
 namespace SQLModel
 {
-    internal class CRUD
+    internal class Crud
     {
         public static T GetById<T>(int id, Session session)
         {
-            Type type = typeof(T);
-            string query = $"SELECT * FROM {GetTableName(type)} WHERE id = {id};";
+            string query = BuildSelectQueryById<T>(id);
 
             using (SqlDataReader reader = session.Execute(query))
             {
-                if (reader.Read())
-                {
-                    var properties = type.GetProperties();
-                    T obj = Activator.CreateInstance<T>();
-                    foreach (var item in properties)
-                    {
-                        FieldAttribute fieldAttribute = item.GetCustomAttribute<FieldAttribute>();
+                return MapToObjectAsync<T>(reader).GetAwaiter().GetResult();
+            }
+        }
+        async public static Task<T> GetByIdAsync<T>(int id, AsyncSession session)
+        {
+            string query = BuildSelectQueryById<T>(id);
 
-                        if (fieldAttribute != null)
-                        {
-                            item.SetValue(obj, reader[fieldAttribute.ColumnName]);
-                        }
+            using (SqlDataReader reader = await session.Execute(query))
+            {
+                return await MapToObjectAsync<T>(reader);
+            }
+        }
+        private static string BuildSelectQueryById<T>(int id)
+        {
+            Type type = typeof(T);
+            return $"SELECT * FROM {GetTableName(type)} WHERE id = {id};";
+        }
+        private static async Task<T> MapToObjectAsync<T>(SqlDataReader reader)
+        {
+            Type type = typeof(T);
+            var properties = type.GetProperties();
+            T obj = Activator.CreateInstance<T>();
+
+            if (await reader.ReadAsync())
+            {
+                foreach (var item in properties)
+                {
+                    FieldAttribute fieldAttribute = item.GetCustomAttribute<FieldAttribute>();
+
+                    if (fieldAttribute != null)
+                    {
+                        item.SetValue(obj, reader[fieldAttribute.ColumnName]);
                     }
-                    return obj;
                 }
             }
-            return default;
-        }
 
-        public static void Create(object newObject, Session session)
+            return obj;
+        }
+        private static string BuildCreateQuery(object newObject)
         {
             Type type = newObject.GetType();
-
             var fields = type.GetProperties();
-
             string fieldList = string.Join(", ", fields.Skip(1).Select(field =>
             {
                 FieldAttribute fieldAttribute = field.GetCustomAttribute<FieldAttribute>();
@@ -54,7 +72,6 @@ namespace SQLModel
 
                 return null;
             }).Where(fieldName => fieldName != null));
-
             string valueList = string.Join(", ", fields.Skip(1).Select(field =>
             {
                 FieldAttribute fieldAttribute = field.GetCustomAttribute<FieldAttribute>();
@@ -65,15 +82,23 @@ namespace SQLModel
 
                     return (field.PropertyType == typeof(string) || field.PropertyType == typeof(DateTime)) ? $"'{value}'" : value.ToString();
                 }
-
                 return null;
             }).Where(fieldValue => fieldValue != null));
-
-            string query = $"insert into {GetTableName(type)} ({fieldList}) values ({valueList});";
-
+            return $"insert into {GetTableName(type)} ({fieldList}) values ({valueList});";
+        }
+        public static void Create(object newObject, Session session)
+        {
+            Type type = newObject.GetType();
+            string query = BuildCreateQuery(newObject);
             session.ExecuteNonQuery(query);
         }
-        public static void Update(object existedObject, Session session)
+        async public static Task CreateAsync(object newObject, AsyncSession session)
+        {
+            Type type = newObject.GetType();
+            string query = BuildCreateQuery(type);
+            await session.ExecuteNonQuery(query);
+        }
+        private static string BuildUpdateQuery(object existedObject)
         {
             Type type = existedObject.GetType();
 
@@ -95,19 +120,37 @@ namespace SQLModel
                 return null;
             }).Where(fieldValue => fieldValue != null));
 
-            string query = $"UPDATE {GetTableName(type)} SET {setClause} WHERE id = {fields[0].GetValue(existedObject)};";
-
+            return $"UPDATE {GetTableName(type)} SET {setClause} WHERE id = {fields[0].GetValue(existedObject)};";
+        }
+        async public static Task UpdateAsync(object existedObject, AsyncSession session)
+        {
+            string query = BuildUpdateQuery(existedObject);
+            await session.ExecuteNonQuery(query);
+        }
+        public static void Update(object existedObject, Session session)
+        {
+            string query = BuildUpdateQuery(existedObject);
             session.ExecuteNonQuery(query);
         }
-        public static void Delete(object existedObject, Session session)
+        private static string BuildDeleteQuery(object existedObject)
         {
             Type type = existedObject.GetType();
 
             var id = type.GetProperty("Id");
 
-            string query = $"DELETE FROM {GetTableName(type)} WHERE id = {id.GetValue(existedObject)};";
+            return $"DELETE FROM {GetTableName(type)} WHERE id = {id.GetValue(existedObject)};";
+        }
+        public static void Delete(object existedObject, Session session)
+        {
+            string query = BuildDeleteQuery(existedObject);
 
             session.ExecuteNonQuery(query);
+        }
+        async public static Task DeleteAsync(object existedObject, AsyncSession session)
+        {
+            string query = BuildDeleteQuery(existedObject);
+
+            await session.ExecuteNonQuery(query);
         }
         private static string GetTableName(Type type)
         {
@@ -115,33 +158,56 @@ namespace SQLModel
 
             return tableAttribute.TableName;
         }
-        public static List<T> GetAll<T>(Session session)
+        private static string BuildSelectAllQuery<T>()
         {
             Type type = typeof(T);
-            string query = $"SELECT * FROM {GetTableName(type)};";
+            return $"SELECT * FROM {GetTableName(type)};";
+        }
+        private static T CreateInstance<T>(SqlDataReader reader)
+        {
+            T obj = Activator.CreateInstance<T>();
+            var properties = typeof(T).GetProperties();
+
+            foreach (var item in properties)
+            {
+                FieldAttribute fieldAttribute = item.GetCustomAttribute<FieldAttribute>();
+
+                if (fieldAttribute != null)
+                {
+                    item.SetValue(obj, reader[fieldAttribute.ColumnName]);
+                }
+            }
+            return obj;
+        }
+        public static List<T> GetAll<T>(Session session)
+        {
+            string query = BuildSelectAllQuery<T>();
             List<T> list = new List<T>();
 
             using (SqlDataReader reader = session.Execute(query))
             {
                 while (reader.Read())
                 {
-                    T obj = Activator.CreateInstance<T>();
-                    var properties = type.GetProperties();
-
-                    foreach (var item in properties)
-                    {
-                        FieldAttribute fieldAttribute = item.GetCustomAttribute<FieldAttribute>();
-
-                        if (fieldAttribute != null)
-                        {
-                            item.SetValue(obj, reader[fieldAttribute.ColumnName]);
-                        }
-                    }
+                    T obj = CreateInstance<T>(reader);
                     list.Add(obj);
                 }
             }
             return list;
+        }
+        async public static Task<List<T>> GetAllAsync<T>(AsyncSession session)
+        {
+            string query = BuildSelectAllQuery<T>();
+            List<T> list = new List<T>();
 
+            using (SqlDataReader reader = await session.Execute(query))
+            {
+                while (await reader.ReadAsync())
+                {
+                    T obj = CreateInstance<T>(reader);
+                    list.Add(obj);
+                }
+            }
+            return list;
         }
     }
 }
