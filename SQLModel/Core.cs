@@ -12,21 +12,13 @@ namespace SQLModel
 {
     public class Core
     {
-        // public bool IsAuthenticated = false;
-
         private string connectionString;
-        
-        // private static string connectionStringWindows = $"Server=localhost;Database={databaseName};Trusted_Connection=True;";
 
-        public Core(string connectionString, bool createTables = false, bool loggingInFile = false, bool consoleLog = false, string logfileName = "orm.log")
+        public Core(string connectionString, bool createTables = false, bool loggingInFile = false, string logfileName = "orm.log")
         {
             this.connectionString = connectionString;
-            if (!Directory.Exists("logs"))
-            {
-                Directory.CreateDirectory("logs");
-            }
 
-            Logging.INIT(loggingInFile, consoleLog);
+            Logging.INIT(loggingInFile, logfileName);
 
             if (createTables)
             {
@@ -35,42 +27,6 @@ namespace SQLModel
 
             CheckExistedTables();
         }
-        //public void AuthenticateSync(string password, string username = "sa")
-        //{
-        //    this.username = username;
-        //    this.password = password;
-        //    string connectionStringTemp = $"Server={ip};Database={databaseName};User ID={username};Password={password};Trusted_Connection=True;";
-        //    try
-        //    {
-        //        var connection = OpenConnection(connectionStringTemp);
-        //        connection.Close();
-        //        IsAuthenticated = true;
-        //        this.connectionString = $"Server={ip};Database={databaseName};User ID={username};Password={password};Trusted_Connection=True;";
-        //    }
-        //    catch (Exception ex) { throw ex; }
-        //}
-        //public async Task AuthenticateAsync(string password, string username = "sa")
-        //{
-        //    this.username = username;
-        //    this.password = password;
-        //    string connectionStringTemp = $"Server={ip};Database={databaseName};User ID={username};Password={password};Trusted_Connection=True;";
-        //    try
-        //    {
-        //        var connection = await OpenConnectionAsync(connectionStringTemp);
-        //        connection.Close();
-        //        IsAuthenticated = true;
-        //        this.connectionString = $"Server={ip};Database={databaseName};User ID={username};Password={password};Trusted_Connection=True;";
-        //    }
-        //    catch (Exception ex) { throw ex; }
-        //}
-
-        //public void Disconnect()
-        //{
-        //    IsAuthenticated = false;
-        //    connectionString = string.Empty;
-        //    username = string.Empty;
-        //    password = string.Empty;
-        //}
         public async Task<SqlConnection> OpenConnectionAsync()
         {
             SqlConnection connection = new SqlConnection(this.connectionString);
@@ -106,7 +62,21 @@ namespace SQLModel
                 throw;
             }
         }
+        async public Task<SqlDataReader> ExecuteQueryAsync(string sql, SqlConnection connection, SqlTransaction transaction)
+        {
+            SqlCommand command = new SqlCommand(sql, connection, transaction);
+            try
+            {
+                Logging.Info($"{sql}");
 
+                return await command.ExecuteReaderAsync();
+            }
+            catch (Exception ex)
+            {
+                Logging.Error($"{sql} Details: {ex.Message}");
+                throw;
+            }
+        }
         public void ExecuteEmptyQuery(string sql, SqlConnection connection, SqlTransaction transaction)
         {
             using (SqlCommand command = new SqlCommand(sql, connection, transaction))
@@ -115,6 +85,22 @@ namespace SQLModel
                 {
                     Logging.Info($"{sql}");
                     command.ExecuteNonQuery();
+                }
+                catch (Exception ex)
+                {
+                    Logging.Error($"{sql} Details: {ex.Message}");
+                    throw;
+                }
+            }
+        }
+        async public Task ExecuteEmptyQueryAsync(string sql, SqlConnection connection, SqlTransaction transaction)
+        {
+            using (SqlCommand command = new SqlCommand(sql, connection, transaction))
+            {
+                try
+                {
+                    Logging.Info($"{sql}");
+                    await command.ExecuteNonQueryAsync();
                 }
                 catch (Exception ex)
                 {
@@ -142,13 +128,14 @@ namespace SQLModel
         {
             return new Session(this);
         }
+        public async Task<AsyncSession> CreateAsyncSession()
+        {
+            return await AsyncSession.Create(this);
+        }
         private void CreateTables()
         {
             List<Type> typesList = GetBaseModelTypes();
 
-            // var types = typeof(BaseModel).Assembly.GetTypes().Where(type => type.IsSubclassOf(typeof(BaseModel)));
-
-            // create tables
             foreach (var type in typesList)
             {
                 using (var session = new Session(this))

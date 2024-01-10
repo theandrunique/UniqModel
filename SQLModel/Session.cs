@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Data.SqlClient;
-using System.Runtime.Remoting.Messaging;
 
 namespace SQLModel
 {
@@ -10,12 +9,13 @@ namespace SQLModel
         Core dbcore;
         SqlConnection conn;
         SqlTransaction transaction;
-        public bool expired = false;
+        public bool Expired { get { return expired; } }
+        private bool expired;
 
         List<SqlDataReader> readerPool = new List<SqlDataReader>();
-        // static uint transactionСounter;
         public Session(Core dbcore)
         {
+            expired = false;
             this.dbcore = dbcore;
 
             conn = dbcore.OpenConnection();

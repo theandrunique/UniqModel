@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Data.Common;
 using System.Data.SqlClient;
 using System.Linq;
 using System.Reflection;
@@ -9,16 +8,16 @@ using System.Threading.Tasks;
 
 namespace SQLModel
 {
-    internal class CRUD
+    internal class AsyncCRUD
     {
-        public static T GetById<T>(int id, Session session)
+        async public static Task<T> GetById<T>(int id, AsyncSession session)
         {
             Type type = typeof(T);
             string query = $"SELECT * FROM {GetTableName(type)} WHERE id = {id};";
 
-            using (SqlDataReader reader = session.Execute(query))
+            using (SqlDataReader reader = await session.Execute(query))
             {
-                if (reader.Read())
+                if (await reader.ReadAsync())
                 {
                     var properties = type.GetProperties();
                     T obj = Activator.CreateInstance<T>();
@@ -37,7 +36,7 @@ namespace SQLModel
             return default;
         }
 
-        public static void Create(object newObject, Session session)
+        async public static Task Create(object newObject, AsyncSession session)
         {
             Type type = newObject.GetType();
 
@@ -71,9 +70,9 @@ namespace SQLModel
 
             string query = $"insert into {GetTableName(type)} ({fieldList}) values ({valueList});";
 
-            session.ExecuteNonQuery(query);
+            await session.ExecuteNonQuery(query);
         }
-        public static void Update(object existedObject, Session session)
+        async public static Task Update(object existedObject, AsyncSession session)
         {
             Type type = existedObject.GetType();
 
@@ -97,9 +96,9 @@ namespace SQLModel
 
             string query = $"UPDATE {GetTableName(type)} SET {setClause} WHERE id = {fields[0].GetValue(existedObject)};";
 
-            session.ExecuteNonQuery(query);
+            await session.ExecuteNonQuery(query);
         }
-        public static void Delete(object existedObject, Session session)
+        async public static Task Delete(object existedObject, AsyncSession session)
         {
             Type type = existedObject.GetType();
 
@@ -107,7 +106,7 @@ namespace SQLModel
 
             string query = $"DELETE FROM {GetTableName(type)} WHERE id = {id.GetValue(existedObject)};";
 
-            session.ExecuteNonQuery(query);
+            await session.ExecuteNonQuery(query);
         }
         private static string GetTableName(Type type)
         {
@@ -115,15 +114,15 @@ namespace SQLModel
 
             return tableAttribute.TableName;
         }
-        public static List<T> GetAll<T>(Session session)
+        async public static Task<List<T>> GetAll<T>(AsyncSession session)
         {
             Type type = typeof(T);
             string query = $"SELECT * FROM {GetTableName(type)};";
             List<T> list = new List<T>();
 
-            using (SqlDataReader reader = session.Execute(query))
+            using (SqlDataReader reader = await session.Execute(query))
             {
-                while (reader.Read())
+                while ( await reader.ReadAsync() )
                 {
                     T obj = Activator.CreateInstance<T>();
                     var properties = type.GetProperties();
