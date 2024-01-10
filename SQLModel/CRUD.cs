@@ -1,13 +1,10 @@
 ﻿using System;
-using System.CodeDom;
 using System.Collections.Generic;
-using System.Data.Common;
+using System.Data;
 using System.Data.SqlClient;
 using System.Linq;
 using System.Reflection;
-using System.Text;
 using System.Threading.Tasks;
-using System.Windows.Documents;
 
 namespace SQLModel
 {
@@ -17,18 +14,18 @@ namespace SQLModel
         {
             string query = BuildSelectQueryById<T>(id);
 
-            using (SqlDataReader reader = session.Execute(query))
+            using (IDataReader reader = session.Execute(query))
             {
-                return MapToObjectAsync<T>(reader).GetAwaiter().GetResult();
+                return MapToObjectAsync<T>(reader, session.DbCore).GetAwaiter().GetResult();
             }
         }
         async public static Task<T> GetByIdAsync<T>(int id, AsyncSession session)
         {
             string query = BuildSelectQueryById<T>(id);
 
-            using (SqlDataReader reader = await session.Execute(query))
+            using (IDataReader reader = await session.Execute(query))
             {
-                return await MapToObjectAsync<T>(reader);
+                return await MapToObjectAsync<T>(reader, session.DbCore);
             }
         }
         private static string BuildSelectQueryById<T>(int id)
@@ -36,13 +33,13 @@ namespace SQLModel
             Type type = typeof(T);
             return $"SELECT * FROM {GetTableName(type)} WHERE id = {id};";
         }
-        private static async Task<T> MapToObjectAsync<T>(SqlDataReader reader)
+        private static async Task<T> MapToObjectAsync<T>(IDataReader reader, Core core)
         {
             Type type = typeof(T);
             var properties = type.GetProperties();
             T obj = Activator.CreateInstance<T>();
 
-            if (await reader.ReadAsync())
+            if (await core.ReadReaderAsync(reader))
             {
                 foreach (var item in properties)
                 {
@@ -163,7 +160,7 @@ namespace SQLModel
             Type type = typeof(T);
             return $"SELECT * FROM {GetTableName(type)};";
         }
-        private static T CreateInstance<T>(SqlDataReader reader)
+        private static T CreateInstance<T>(IDataReader reader)
         {
             T obj = Activator.CreateInstance<T>();
             var properties = typeof(T).GetProperties();
@@ -184,7 +181,7 @@ namespace SQLModel
             string query = BuildSelectAllQuery<T>();
             List<T> list = new List<T>();
 
-            using (SqlDataReader reader = session.Execute(query))
+            using (IDataReader reader = session.Execute(query))
             {
                 while (reader.Read())
                 {
@@ -199,9 +196,9 @@ namespace SQLModel
             string query = BuildSelectAllQuery<T>();
             List<T> list = new List<T>();
 
-            using (SqlDataReader reader = await session.Execute(query))
+            using (IDataReader reader = await session.Execute(query))
             {
-                while (await reader.ReadAsync())
+                while (await session.ReadAsync(reader))
                 {
                     T obj = CreateInstance<T>(reader);
                     list.Add(obj);

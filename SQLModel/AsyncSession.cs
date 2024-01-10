@@ -1,22 +1,21 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Data;
 using System.Data.SqlClient;
-using System.Linq;
-using System.Runtime.InteropServices;
-using System.Text;
 using System.Threading.Tasks;
 
 namespace SQLModel
 {
     public class AsyncSession : IDisposable
     {
+        public Core DbCore { get { return dbcore; } }
         Core dbcore;
-        SqlConnection conn;
-        SqlTransaction transaction;
+        IDbConnection conn;
+        IDbTransaction transaction;
         public bool Expired { get { return expired; } }
         private bool expired;
 
-        List<SqlDataReader> readerPool = new List<SqlDataReader>();
+        List<IDataReader> readerPool = new List<IDataReader>();
         public AsyncSession(Core dbcore)
         {
             this.dbcore = dbcore;
@@ -25,13 +24,12 @@ namespace SQLModel
         {
             var asyncSession = new AsyncSession(dbcore);
 
-            SqlConnection conn = await dbcore.OpenConnectionAsync();
+            IDbConnection conn = await dbcore.OpenConnectionAsync();
             asyncSession.conn = conn;
             try
             {
                 Logging.Info($"BEGIN (implicit)");
-
-                asyncSession.transaction = conn.BeginTransaction();
+                asyncSession.transaction = await dbcore.BeginTransactionAsync(conn);
             }
             catch (Exception ex)
             {
@@ -40,7 +38,7 @@ namespace SQLModel
             }
             return asyncSession;
         }
-        public void Dispose()
+        public async void Dispose()
         {
             foreach (var reader in readerPool)
             {
@@ -51,7 +49,7 @@ namespace SQLModel
             }
             try
             {
-                transaction.Commit();
+                await dbcore.CommitTransactionAsync(transaction);
                 Logging.Info($"COMMIT");
             }
             catch (Exception ex)
@@ -60,7 +58,8 @@ namespace SQLModel
             }
             finally
             {
-                conn.Close();
+                await dbcore.CloseConnectionAsync(conn);
+                expired = true;
             }
         }
         async public Task<T> GetById<T>(int id)
@@ -92,16 +91,20 @@ namespace SQLModel
             }
             catch { expired = true; }
         }
-        async public Task<SqlDataReader> Execute(string query)
+        async public Task<IDataReader> Execute(string query)
         {
             CheckIsExpired();
             try
             {
-                SqlDataReader reader = await dbcore.ExecuteQueryAsync(query, conn, transaction);
+                IDataReader reader = await dbcore.ExecuteQueryAsync(query, conn, transaction);
                 readerPool.Add(reader);
                 return reader;
             }
             catch { expired = true; return null; }
+        }
+        async public Task<bool> ReadAsync(IDataReader reader)
+        {
+            return await dbcore.ReadReaderAsync(reader);
         }
         public void CheckIsExpired()
         {

@@ -1,29 +1,30 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Data;
 using System.Data.SqlClient;
 
 namespace SQLModel
 {
     public class Session : IDisposable
     {
+        public Core DbCore { get { return dbcore; } }
         Core dbcore;
-        SqlConnection conn;
-        SqlTransaction transaction;
+        IDbConnection conn;
+        IDbTransaction transaction;
         public bool Expired { get { return expired; } }
         private bool expired;
 
-        List<SqlDataReader> readerPool = new List<SqlDataReader>();
+        List<IDataReader> readerPool = new List<IDataReader>();
         public Session(Core dbcore)
         {
             expired = false;
             this.dbcore = dbcore;
             conn = dbcore.OpenConnection();
-
             try
             {
                 Logging.Info($"BEGIN (implicit)");
 
-                transaction = conn.BeginTransaction();
+                transaction = dbcore.BeginTransaction(conn);
             }
             catch (Exception ex)
             {
@@ -42,7 +43,7 @@ namespace SQLModel
             }
             try
             {
-                transaction.Commit();
+                dbcore.CommitTransaction(transaction);
                 Logging.Info($"COMMIT");
             }
             catch (Exception ex)
@@ -52,7 +53,8 @@ namespace SQLModel
             }
             finally
             {
-                conn.Close();
+                dbcore.CloseConnection(conn);
+                expired = true;
             }
         }
         public T GetById<T>(int id)
@@ -84,12 +86,12 @@ namespace SQLModel
             }
             catch { expired = true; }
         }
-        public SqlDataReader Execute(string query)
+        public IDataReader Execute(string query)
         {
             CheckIsExpired();
             try
             {
-                SqlDataReader reader = dbcore.ExecuteQuery(query, conn, transaction);
+                IDataReader reader = dbcore.ExecuteQuery(query, conn, transaction);
                 readerPool.Add(reader);
                 return reader;
             }
