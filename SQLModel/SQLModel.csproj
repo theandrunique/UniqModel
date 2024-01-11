@@ -6,6 +6,8 @@
     <GeneratePackageOnBuild>True</GeneratePackageOnBuild>
     <PackageId>theandru-dotnet-orm</PackageId>
     <Title>SQLModel</Title>
+    <AssemblyVersion>1.0.1.1</AssemblyVersion>
+    <Version>1.0.2</Version>
   </PropertyGroup>
 
   <ItemGroup>

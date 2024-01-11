@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Data;
-using System.Data.SqlClient;
 using System.Linq;
 using System.Reflection;
 using System.Threading.Tasks;
@@ -47,7 +46,7 @@ namespace SQLModel
 
                     if (fieldAttribute != null)
                     {
-                        item.SetValue(obj, reader[fieldAttribute.ColumnName]);
+                        item.SetValue(obj, Convert.ChangeType(reader[fieldAttribute.ColumnName], item.PropertyType));
                     }
                 }
             }
@@ -172,7 +171,7 @@ namespace SQLModel
 
                 if (fieldAttribute != null)
                 {
-                    item.SetValue(obj, reader[fieldAttribute.ColumnName]);
+                    item.SetValue(obj, Convert.ChangeType(reader[fieldAttribute.ColumnName], item.PropertyType));
                 }
             }
             return obj;
