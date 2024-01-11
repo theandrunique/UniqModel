@@ -15,7 +15,7 @@ namespace SQLModel
 
             using (IDataReader reader = session.Execute(query))
             {
-                return MapToObjectAsync<T>(reader, session.DbCore).GetAwaiter().GetResult();
+                return MapToObjectAsync<T>(reader, session.DbCore).Result;
             }
         }
         async public static Task<T> GetByIdAsync<T>(int id, AsyncSession session)

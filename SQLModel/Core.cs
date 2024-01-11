@@ -54,7 +54,7 @@ namespace SQLModel
         }
         public IDbConnection OpenConnection()
         {
-            return OpenConnectionIternal().GetAwaiter().GetResult();
+            return OpenConnectionIternal().Result;
         }
         async private Task<IDbConnection> OpenConnectionIternal()
         {
@@ -62,7 +62,7 @@ namespace SQLModel
         }
         public IDataReader ExecuteQuery(string sql, IDbConnection connection, IDbTransaction transaction)
         {
-            return ExecuteQueryIternal(sql, connection, transaction).GetAwaiter().GetResult();
+            return ExecuteQueryIternal(sql, connection, transaction).Result;
         }
         async public Task<IDataReader> ExecuteQueryAsync(string sql, IDbConnection connection, IDbTransaction transaction)
         {
@@ -109,7 +109,7 @@ namespace SQLModel
         }
         public IDbTransaction BeginTransaction(IDbConnection connection)
         {
-            return BeginTransactionIternal(connection).GetAwaiter().GetResult();
+            return BeginTransactionIternal(connection).Result;
         }
         public async Task<IDbTransaction> BeginTransactionAsync(IDbConnection connection)
         {
@@ -121,7 +121,7 @@ namespace SQLModel
         }
         public void CommitTransaction(IDbTransaction transaction)
         {
-            CommitTransactionIternal(transaction).GetAwaiter().GetResult();
+            CommitTransactionIternal(transaction).Wait();
         }
         public async Task CommitTransactionAsync(IDbTransaction transaction)
         {
@@ -133,7 +133,7 @@ namespace SQLModel
         }
         public bool ReadReader(IDataReader reader)
         {
-            return ReadReaderIternal(reader).GetAwaiter().GetResult();
+            return ReadReaderIternal(reader).Result;
         }
         public async Task<bool> ReadReaderAsync(IDataReader reader)
         {
@@ -145,7 +145,7 @@ namespace SQLModel
         }
         public void CloseConnection(IDbConnection connection)
         {
-            CloseConnectionIternal(connection).GetAwaiter().GetResult();
+            CloseConnectionIternal(connection).Wait();
         }
         public async Task CloseConnectionAsync(IDbConnection connection)
         {
