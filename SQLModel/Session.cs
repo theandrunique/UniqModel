@@ -84,7 +84,12 @@ namespace SQLModel
             {
                 dbcore.ExecuteEmptyQuery(query, conn, transaction);
             }
-            catch { expired = true; }
+            catch
+            {
+                expired = true;
+                if (dbcore.DropErrors)
+                    throw;
+            }
         }
         public IDataReader Execute(string query)
         {
@@ -95,7 +100,13 @@ namespace SQLModel
                 readerPool.Add(reader);
                 return reader;
             }
-            catch { expired = true; return null; }
+            catch
+            {
+                expired = true;
+                if (dbcore.DropErrors)
+                    throw;
+                return null;
+            }
         }
         public void CheckIsExpired()
         {

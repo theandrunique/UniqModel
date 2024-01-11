@@ -2,7 +2,7 @@
 
 namespace SQLModel
 {
-    public enum DatabaseType
+    public enum DatabaseEngine
     {
         SqlServer,
         MySql,

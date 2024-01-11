@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Generic;
 using System.Data;
+using System.Data.Common;
 using System.Data.SqlClient;
 using System.Linq;
 using System.Reflection;
@@ -13,8 +14,10 @@ namespace SQLModel
     {
         private string connectionString;
         private IDatabaseProvider databaseProvider;
+        public IDatabaseProvider DatabaseProvider { get { return databaseProvider; } }
+        public bool DropErrors { get; set; }
 
-        public Core(DatabaseType databaseType, string connectionString, bool createTables = false, bool loggingInFile = false, string logfileName = "orm.log")
+        public Core(DatabaseEngine databaseType, string connectionString, bool createTables = false, bool loggingInFile = false, string logfileName = "orm.log", bool dropErrors = false)
         {
             SelectProvider(databaseType);
 
@@ -26,19 +29,20 @@ namespace SQLModel
             {
                 CreateTables();
             }
-            //CheckExistedTables();
+            DropErrors = dropErrors;
+            CheckExistedTables();
         }
-        private void SelectProvider(DatabaseType databaseType)
+        private void SelectProvider(DatabaseEngine databaseType)
         {
             switch (databaseType)
             {
-                case DatabaseType.SqlServer:
+                case DatabaseEngine.SqlServer:
                     databaseProvider = new SqlServerDatabaseProvider();
                     break;
                 //case DatabaseType.MySql:
                 //    databaseProvider = new MySqlDatabaseProvider();
                 //    break;
-                case DatabaseType.Sqlite:
+                case DatabaseEngine.Sqlite:
                     databaseProvider = new SqliteDatabaseProvider();
                     break;
                 default:
@@ -167,6 +171,10 @@ namespace SQLModel
                 return values;
             }
         }
+        public string GetAutoIncrementWithType()
+        {
+            return databaseProvider.GetAutoIncrementWithType();
+        }
         public Session CreateSession()
         {
             return new Session(this);
@@ -181,35 +189,42 @@ namespace SQLModel
 
             foreach (var type in typesList)
             {
-                using (var session = new Session(this))
+                var tableAttribute = (TableAttribute)type.GetCustomAttribute(typeof(TableAttribute));
+                if (!TableExists(tableAttribute.TableName))
                 {
-                    TableCreator.CreateTable(type, session);
+                    using (var session = new Session(this))
+                    {
+                        TableBuilder.CreateTable(type, session);
+                    }
                 }
             }
             // create foreign keys
+
+            bool temp = DropErrors;
+            DropErrors = false;
+
             foreach (var type in typesList)
             {
                 using (var session = new Session(this))
                 {
-                    TableCreator.CreateForeignKey(type, session);
+                    TableBuilder.CreateForeignKey(type, session);
                 }
             }
-        }
-        //private void CheckExistedTables()
-        //{
-        //    List<Type> typesList = GetBaseModelTypes();
 
-        //    foreach (var type in typesList)
-        //    {
-        //        var tableAttribute = (TableAttribute)type.GetCustomAttribute(typeof(TableAttribute));
-        //        if (tableAttribute == null)
-        //        {
-        //            throw new ArgumentException("The class must be marked with TableAttribute.");
-        //        }
-        //        if (!TableExists(tableAttribute.TableName, this))
-        //            throw new Exception($"Table {tableAttribute.TableName} does not exists");
-        //    }
-        //}
+            DropErrors = temp;
+        }
+        private void CheckExistedTables()
+        {
+            List<Type> typesList = GetBaseModelTypes();
+
+            foreach (var type in typesList)
+            {
+                var tableAttribute = (TableAttribute)type.GetCustomAttribute(typeof(TableAttribute));
+
+                if (!TableExists(tableAttribute.TableName))
+                    throw new Exception($"Table {tableAttribute.TableName} does not exists");
+            }
+        }
         static List<Type> GetBaseModelTypes()
         {
             List<Type> typesList = new List<Type>();
@@ -220,27 +235,38 @@ namespace SQLModel
                 typesList.AddRange(types);
             }
 
+            foreach(var type in typesList)
+            {
+                var tableAttribute = (TableAttribute)type.GetCustomAttribute(typeof(TableAttribute));
+                if (tableAttribute == null)
+                {
+                    throw new ArgumentException("The class must be marked with TableAttribute.");
+                }
+            }
             return typesList;
         }
-        //static bool TableExists(string tableName, Core dbcore)
-        //{
-        //    using (IDbConnection connection = dbcore.OpenConnection())
-        //    {
-        //        using (IDbCommand command = new SqlCommand($"SELECT 1 FROM {tableName} WHERE 1=0", connection))
-        //        {
-        //            try
-        //            {
-        //                command.ExecuteNonQuery();
-        //                Logging.Info($"Table {tableName} is verified");
-        //                return true;
-        //            }
-        //            catch (SqlException ex)
-        //            {
-        //                Logging.Critical($"Table {tableName} does not exist. Please check the database schema. Detail: {ex.Message}");
-        //                return false;
-        //            }
-        //        }
-        //    }
-        //}
+        private bool TableExists(string tableName)
+        {
+            bool temp = DropErrors;
+            DropErrors = true;
+            using (var session = this.CreateSession())
+            {
+                try
+                {
+                    session.ExecuteNonQuery($"SELECT 1 FROM {tableName} WHERE 1=0");
+                    Logging.Info($"Table {tableName} is verified");
+                    return true;
+                }
+                catch (Exception ex)
+                {
+                    Logging.Critical($"Table {tableName} does not exist. Please check the database schema. Detail: {ex.Message}");
+                    return false;
+                }
+                finally
+                {
+                    DropErrors = temp;
+                }
+            }
+        }
     }
 }

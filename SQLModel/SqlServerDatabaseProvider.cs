@@ -40,5 +40,9 @@ namespace SQLModel
         {
             return await ((SqlDataReader)reader).ReadAsync();
         }
+        public string GetAutoIncrementWithType()
+        {
+            return "INT IDENTITY(1,1) PRIMARY KEY";
+        }
     }
 }

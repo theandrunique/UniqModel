@@ -89,7 +89,12 @@ namespace SQLModel
             {
                 await dbcore.ExecuteEmptyQueryAsync(query, conn, transaction);
             }
-            catch { expired = true; }
+            catch
+            {
+                expired = true;
+                if (dbcore.DropErrors)
+                    throw;
+            }
         }
         async public Task<IDataReader> Execute(string query)
         {
@@ -100,7 +105,13 @@ namespace SQLModel
                 readerPool.Add(reader);
                 return reader;
             }
-            catch { expired = true; return null; }
+            catch
+            {
+                expired = true;
+                if (dbcore.DropErrors)
+                    throw;
+                return null;
+            }
         }
         async public Task<bool> ReadAsync(IDataReader reader)
         {

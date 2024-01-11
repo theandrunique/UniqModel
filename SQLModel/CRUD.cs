@@ -152,7 +152,10 @@ namespace SQLModel
         private static string GetTableName(Type type)
         {
             var tableAttribute = (TableAttribute)type.GetCustomAttribute(typeof(TableAttribute));
-
+            if (tableAttribute == null)
+            {
+                throw new ArgumentException("The class must be marked with TableAttribute.");
+            }
             return tableAttribute.TableName;
         }
         private static string BuildSelectAllQuery<T>()

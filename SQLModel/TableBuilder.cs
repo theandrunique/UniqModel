@@ -5,11 +5,11 @@ using System.Reflection;
 
 namespace SQLModel
 {
-    internal class TableCreator
+    internal class TableBuilder
     {
         public static void CreateTable(Type type, Session session)
         {
-            string createTableQuery = TableCreator.GenerateCreateTableQuery(type);
+            string createTableQuery = TableBuilder.GenerateCreateTableQuery(type, session);
 
             session.ExecuteNonQuery(createTableQuery);
         }
@@ -27,14 +27,9 @@ namespace SQLModel
                 }
             }
         }
-        private static string GenerateCreateTableQuery(Type type)
+        private static string GenerateCreateTableQuery(Type type, Session session)
         {
             var tableAttribute = (TableAttribute)type.GetCustomAttribute(typeof(TableAttribute));
-
-            if (tableAttribute == null)
-            {
-                throw new ArgumentException("The class must be marked with TableAttribute.");
-            }
 
             string createTableQuery = $"CREATE TABLE {tableAttribute.TableName} (";
 
@@ -46,7 +41,7 @@ namespace SQLModel
 
                 if (fieldAttribute is PrimaryKeyAttribute)
                 {
-                    createTableQuery += $"{fieldAttribute.ColumnName} {fieldAttribute.ColumnType} IDENTITY(1,1) PRIMARY KEY, ";
+                    createTableQuery += $"{fieldAttribute.ColumnName} {fieldAttribute.ColumnType} {session.DbCore.DatabaseProvider.GetAutoIncrementWithType()}, ";
                 } 
                 else if (fieldAttribute is FieldAttribute)
                 {
@@ -64,11 +59,6 @@ namespace SQLModel
         private static string GenerateAddForeignKeyQuery(Type type, PropertyInfo property, ForeignKeyAttribute foreignKeyAttribute)
         {
             var tableAttribute = (TableAttribute)type.GetCustomAttribute(typeof(TableAttribute));
-
-            if (tableAttribute == null)
-            {
-                throw new ArgumentException("The class must be marked with TableAttribute.");
-            }
 
             return $"ALTER TABLE {tableAttribute.TableName} " +
                 $"ADD CONSTRAINT FK_{tableAttribute.TableName}_{foreignKeyAttribute.ReferenceTableName} " +

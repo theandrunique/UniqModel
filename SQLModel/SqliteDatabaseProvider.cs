@@ -40,6 +40,11 @@ namespace SQLModel
             return await ((SqliteCommand)command).ExecuteReaderAsync();
         }
 
+        public string GetAutoIncrementWithType()
+        {
+            return "INTEGER PRIMARY KEY AUTOINCREMENT";
+        }
+
         public async Task<IDbConnection> OpenConnectionIternal(string connectionString)
         {
             SqliteConnection conn = new SqliteConnection(connectionString);

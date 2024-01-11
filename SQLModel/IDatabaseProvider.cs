@@ -13,5 +13,6 @@ namespace SQLModel
         Task<IDataReader> ExecuteReader(IDbCommand command);
         Task ExecuteNonQuery(IDbCommand command);
         Task<bool> Read(IDataReader reader);
+        string GetAutoIncrementWithType();
     }
 }
