@@ -16,7 +16,6 @@ namespace SQLModel
         private IDatabaseProvider databaseProvider;
         public IDatabaseProvider DatabaseProvider { get { return databaseProvider; } }
         public bool DropErrors { get; set; }
-
         public Core(DatabaseEngine databaseType, string connectionString, bool createTables = false, bool loggingInFile = false, string logfileName = "orm.log", bool dropErrors = false)
         {
             SelectProvider(databaseType);
@@ -30,7 +29,7 @@ namespace SQLModel
                 CreateTables();
             }
             DropErrors = dropErrors;
-            CheckExistedTables();
+            //CheckExistedTables();
         }
         private void SelectProvider(DatabaseEngine databaseType)
         {

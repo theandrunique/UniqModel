@@ -85,14 +85,12 @@ namespace SQLModel
         }
         public static void Create(object newObject, Session session)
         {
-            Type type = newObject.GetType();
             string query = BuildCreateQuery(newObject);
             session.ExecuteNonQuery(query);
         }
         async public static Task CreateAsync(object newObject, AsyncSession session)
         {
-            Type type = newObject.GetType();
-            string query = BuildCreateQuery(type);
+            string query = BuildCreateQuery(newObject);
             await session.ExecuteNonQuery(query);
         }
         private static string BuildUpdateQuery(object existedObject)

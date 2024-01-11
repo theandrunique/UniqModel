@@ -4,12 +4,12 @@
     <TargetFramework>net48</TargetFramework>
     <UseWPF>true</UseWPF>
     <GeneratePackageOnBuild>True</GeneratePackageOnBuild>
-    <PackageId>dotnet-orm</PackageId>
+    <PackageId>theandru-dotnet-orm</PackageId>
     <Title>SQLModel</Title>
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Microsoft.Data.Sqlite" Version="8.0.1" />
+    <PackageReference Include="Microsoft.Data.Sqlite" Version="2.2.0" />
     <PackageReference Include="NLog" Version="5.2.8" />
     <PackageReference Include="System.Data.SqlClient" Version="4.8.5" />
   </ItemGroup>
