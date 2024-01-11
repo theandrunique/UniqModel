@@ -6,5 +6,6 @@ namespace SQLModel
     {
         SqlServer,
         MySql,
+        Sqlite,
     }
 }

@@ -38,6 +38,9 @@ namespace SQLModel
                 //case DatabaseType.MySql:
                 //    databaseProvider = new MySqlDatabaseProvider();
                 //    break;
+                case DatabaseType.Sqlite:
+                    databaseProvider = new SqliteDatabaseProvider();
+                    break;
                 default:
                     throw new ArgumentOutOfRangeException(nameof(databaseType), "Unsupported database type");
             }
