@@ -1,8 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace SQLModel
 {
@@ -12,8 +8,10 @@ namespace SQLModel
         public string ReferenceTableName { get; }
         public string ReferenceFieldName { get; }
         public Type ReferenceClass { get; }
-
-        public ForeignKeyAttribute(string columnName, string columnType, string reference, Type referenceClass) : 
+        public string OnDeleteRule { get; }
+        public string OnUpdateRule { get; }
+        public ForeignKeyAttribute(string columnName, string columnType, string reference, Type referenceClass, 
+            ForeignKeyRule onDeleteRule = ForeignKeyRule.Restrict, ForeignKeyRule onUpdateRule = ForeignKeyRule.Restrict) : 
             base(columnName, columnType)
         {
             try
@@ -28,6 +26,8 @@ namespace SQLModel
                 ReferenceTableName = arr[0];
                 ReferenceFieldName = arr[1];
                 ReferenceClass = referenceClass;
+                OnDeleteRule = ForeignKeyRuleMapper.MapToSql(onDeleteRule);
+                OnUpdateRule = ForeignKeyRuleMapper.MapToSql(onUpdateRule);
             }
             catch (Exception ex)
             {

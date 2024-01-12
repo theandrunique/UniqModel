@@ -193,16 +193,12 @@ namespace SQLModel
                 }
             }
             // create foreign keys
-
             bool temp = DropErrors;
             DropErrors = false;
 
             foreach (var type in typesList)
             {
-                using (var session = new Session(this))
-                {
-                    TableBuilder.CreateForeignKey(type, session);
-                }
+                TableBuilder.CreateForeignKeys(type, this);
             }
 
             DropErrors = temp;

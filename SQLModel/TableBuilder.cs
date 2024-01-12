@@ -13,7 +13,7 @@ namespace SQLModel
 
             session.ExecuteNonQuery(createTableQuery);
         }
-        public static void CreateForeignKey(Type type, Session session)
+        public static void CreateForeignKeys(Type type, Core dbcore)
         {
             PropertyInfo[] properties = type.GetProperties();
             
@@ -22,8 +22,11 @@ namespace SQLModel
                 var foreignKeyAttribute = (ForeignKeyAttribute)property.GetCustomAttribute(typeof(ForeignKeyAttribute));
                 if (foreignKeyAttribute != null)
                 {
-                    string query = GenerateAddForeignKeyQuery(type, property, foreignKeyAttribute);
-                    session.ExecuteNonQuery(query);
+                    string query = GenerateAddForeignKeyQuery(type, foreignKeyAttribute);
+                    using (var session = dbcore.CreateSession())
+                    {
+                        session.ExecuteNonQuery(query);
+                    }
                 }
             }
         }
@@ -56,16 +59,17 @@ namespace SQLModel
             return createTableQuery;
         }
 
-        private static string GenerateAddForeignKeyQuery(Type type, PropertyInfo property, ForeignKeyAttribute foreignKeyAttribute)
+        private static string GenerateAddForeignKeyQuery(Type type, ForeignKeyAttribute foreignKeyAttribute)
         {
             var tableAttribute = (TableAttribute)type.GetCustomAttribute(typeof(TableAttribute));
 
             return $"ALTER TABLE {tableAttribute.TableName} " +
                 $"ADD CONSTRAINT FK_{tableAttribute.TableName}_{foreignKeyAttribute.ReferenceTableName} " +
                 $"FOREIGN KEY ({foreignKeyAttribute.ColumnName}) " +
-                $"REFERENCES {foreignKeyAttribute.ReferenceTableName} ( {foreignKeyAttribute.ReferenceFieldName});";
+                $"REFERENCES {foreignKeyAttribute.ReferenceTableName} ({foreignKeyAttribute.ReferenceFieldName})" +
+                $"ON DELETE {foreignKeyAttribute.OnDeleteRule} " +
+                $"ON UPDATE {foreignKeyAttribute.OnUpdateRule};";
         }
-
         //private static string GetSqlType(Type propertyType)
         //{
         //    if (propertyType == typeof(int))
