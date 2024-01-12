@@ -7,6 +7,8 @@ namespace SQLModel
     public class Session : IDisposable
     {
         public Core DbCore { get { return dbcore; } }
+        public IDbConnection Connection { get { return conn; } }
+        public IDbTransaction Transaction { get { return transaction; } }
         Core dbcore;
         IDbConnection conn;
         IDbTransaction transaction;

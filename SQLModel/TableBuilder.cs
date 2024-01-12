@@ -15,6 +15,11 @@ namespace SQLModel
         }
         public static void CreateForeignKeys(Type type, Core dbcore)
         {
+            if (dbcore.DatabaseProvider is SqliteDatabaseProvider)
+            {
+                throw new NotSupportedException("SqliteDatabaseProvider does not support creating foreign keys after creating tables");
+            }
+
             PropertyInfo[] properties = type.GetProperties();
             
             foreach(PropertyInfo property in properties)
@@ -66,7 +71,7 @@ namespace SQLModel
             return $"ALTER TABLE {tableAttribute.TableName} " +
                 $"ADD CONSTRAINT FK_{tableAttribute.TableName}_{foreignKeyAttribute.ReferenceTableName} " +
                 $"FOREIGN KEY ({foreignKeyAttribute.ColumnName}) " +
-                $"REFERENCES {foreignKeyAttribute.ReferenceTableName} ({foreignKeyAttribute.ReferenceFieldName})" +
+                $"REFERENCES {foreignKeyAttribute.ReferenceTableName} ({foreignKeyAttribute.ReferenceFieldName}) " +
                 $"ON DELETE {foreignKeyAttribute.OnDeleteRule} " +
                 $"ON UPDATE {foreignKeyAttribute.OnUpdateRule};";
         }

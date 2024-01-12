@@ -20,14 +20,15 @@ namespace SQLModel
         {
             SelectProvider(databaseType);
 
-            this.connectionString = connectionString;
-
             Logging.INIT(loggingInFile, logfileName);
+
+            this.connectionString = connectionString;
 
             if (createTables)
             {
                 CreateTables();
             }
+
             DropErrors = dropErrors;
             //CheckExistedTables();
         }
@@ -239,23 +240,25 @@ namespace SQLModel
         {
             bool temp = DropErrors;
             DropErrors = true;
-            using (var session = this.CreateSession())
+            Logging.IsEnabled = false;
+            try
             {
-                try
+                using (var session = this.CreateSession())
                 {
-                    session.ExecuteNonQuery($"SELECT 1 FROM {tableName} WHERE 1=0");
-                    Logging.Info($"Table {tableName} is verified");
-                    return true;
+                    ExecuteEmptyQuery($"SELECT 1 FROM {tableName} WHERE 1=0", session.Connection, session.Transaction);
                 }
-                catch (Exception ex)
-                {
-                    Logging.Critical($"Table {tableName} does not exist. Please check the database schema. Detail: {ex.Message}");
-                    return false;
-                }
-                finally
-                {
-                    DropErrors = temp;
-                }
+                // Logging.Info($"Table {tableName} is verified");
+                return true;
+            }
+            catch (Exception ex)
+            {
+                // Logging.Critical($"Table {tableName} does not exist. Please check the database schema. Detail: {ex.Message}");
+                return false;
+            }
+            finally
+            {
+                DropErrors = temp;
+                Logging.IsEnabled = true;
             }
         }
     }

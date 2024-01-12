@@ -6,6 +6,7 @@ namespace SQLModel
     public class Logging
     {
         private static readonly Logger log = LogManager.GetCurrentClassLogger();
+        public static bool IsEnabled = true;
         public static void INIT(bool loggingInFile, string logfileName)
         {
             var config = new NLog.Config.LoggingConfiguration();
@@ -18,27 +19,32 @@ namespace SQLModel
         }
         public static void Error(string message)
         {
-            log.Error(message);
+            if (IsEnabled)
+                log.Error(message);
         }
 
         public static void Info(string message)
         {
-            log.Info(message);
+            if (IsEnabled)
+                log.Info(message);
         }
 
         public static void Warning(string message)
         {
-            log.Warn(message);
+            if (IsEnabled)
+                log.Warn(message);
         }
 
         public static void Debug(string message)
         {
-            log.Debug(message);
+            if (IsEnabled)
+                log.Debug(message);
         }
 
         public static void Critical(string message)
         {
-            log.Fatal(message);
+            if (IsEnabled)
+                log.Fatal(message);
         }
         //private static void WriteLog(LogLevel level, string message)
         //{
