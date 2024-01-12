@@ -189,20 +189,31 @@ namespace SQLModel
                 {
                     using (var session = new Session(this))
                     {
+                        TableBuilder.CreateTableWithoutForeignKey(type, session);
+                    }
+                }
+            }
+            foreach (var type in typesList)
+            {
+                var tableAttribute = (TableAttribute)type.GetCustomAttribute(typeof(TableAttribute));
+                if (!TableExists(tableAttribute.TableName))
+                {
+                    using (var session = new Session(this))
+                    {
                         TableBuilder.CreateTable(type, session);
                     }
                 }
             }
             // create foreign keys
-            bool temp = DropErrors;
-            DropErrors = false;
+            //bool temp = DropErrors;
+            //DropErrors = false;
 
-            foreach (var type in typesList)
-            {
-                TableBuilder.CreateForeignKeys(type, this);
-            }
+            //foreach (var type in typesList)
+            //{
+            //    TableBuilder.CreateForeignKeys(type, this);
+            //}
 
-            DropErrors = temp;
+            //DropErrors = temp;
         }
         private void CheckExistedTables()
         {

@@ -1,6 +1,8 @@
+using Microsoft.Data.Sqlite;
+
 namespace SQLModel.Tests
 {
-    public class UnitTest1
+    public class SqliteProviderTests
     {
         [Fact]
         public void CreateTablesSqliteTest()
@@ -64,7 +66,11 @@ namespace SQLModel.Tests
 
                 session.Update(profile);
 
-                session.Delete(session.GetById<ProfilesTable>(1));
+                Assert.Throws<SqliteException>(() =>
+                {
+                    session.Delete(session.GetById<ProfilesTable>(1));
+                });
+
             }
         }
         [Table("logins")]

@@ -1,7 +1,9 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Data.SqlClient;
 using System.Diagnostics.Eventing.Reader;
 using System.Reflection;
+using System.Windows.Documents;
 
 namespace SQLModel
 {
@@ -10,8 +12,16 @@ namespace SQLModel
         public static void CreateTable(Type type, Session session)
         {
             string createTableQuery = TableBuilder.GenerateCreateTableQuery(type, session);
-
             session.ExecuteNonQuery(createTableQuery);
+        }
+        public static void CreateTableWithoutForeignKey(Type type, Session session)
+        {
+            string createTableQuery = TableBuilder.GenerateCreateTableQueryWithoutForeignKeys(type, session);
+
+            if (createTableQuery != null)
+            {
+                session.ExecuteNonQuery(createTableQuery);
+            }
         }
         public static void CreateForeignKeys(Type type, Core dbcore)
         {
@@ -43,6 +53,8 @@ namespace SQLModel
 
             PropertyInfo[] properties = type.GetProperties();
 
+            List<ForeignKeyAttribute> foreignKeys = new List<ForeignKeyAttribute>();
+
             foreach (var property in properties)
             {
                 var fieldAttribute = (FieldAttribute)property.GetCustomAttribute(typeof(FieldAttribute));
@@ -51,11 +63,46 @@ namespace SQLModel
                 {
                     createTableQuery += $"{fieldAttribute.ColumnName} {fieldAttribute.ColumnType} {session.DbCore.DatabaseProvider.GetAutoIncrementWithType()}, ";
                 } 
-                else if (fieldAttribute is FieldAttribute)
+                else if (fieldAttribute is ForeignKeyAttribute)
+                {
+                    createTableQuery += $"{fieldAttribute.ColumnName} {fieldAttribute.ColumnType}, ";
+                    foreignKeys.Add((ForeignKeyAttribute)fieldAttribute);
+
+                } else if (fieldAttribute is FieldAttribute)
                 {
                     createTableQuery += $"{fieldAttribute.ColumnName} {fieldAttribute.ColumnType}, ";
                 }
+            }
+
+            foreach (var foreignKey in foreignKeys)
+            {
+                createTableQuery += $"{ForeignKeyWithQuery(foreignKey)}, ";
+            }
+
+            createTableQuery = createTableQuery.TrimEnd(',', ' ') + ");";
+            return createTableQuery;
+        }
+        private static string GenerateCreateTableQueryWithoutForeignKeys(Type type, Session session)
+        {
+            var tableAttribute = (TableAttribute)type.GetCustomAttribute(typeof(TableAttribute));
+
+            string createTableQuery = $"CREATE TABLE {tableAttribute.TableName} (";
+
+            PropertyInfo[] properties = type.GetProperties();
+
+            foreach (var property in properties)
+            {
+                var fieldAttribute = (FieldAttribute)property.GetCustomAttribute(typeof(FieldAttribute));
+
+                if (fieldAttribute is PrimaryKeyAttribute)
+                {
+                    createTableQuery += $"{fieldAttribute.ColumnName} {fieldAttribute.ColumnType} {session.DbCore.DatabaseProvider.GetAutoIncrementWithType()}, ";
+                }
                 else if (fieldAttribute is ForeignKeyAttribute)
+                {
+                    return null;
+                    // createTableQuery += $"{fieldAttribute.ColumnName} {fieldAttribute.ColumnType}, ";
+                } else if (fieldAttribute is FieldAttribute)
                 {
                     createTableQuery += $"{fieldAttribute.ColumnName} {fieldAttribute.ColumnType}, ";
                 }
@@ -63,7 +110,10 @@ namespace SQLModel
             createTableQuery = createTableQuery.TrimEnd(',', ' ') + ");";
             return createTableQuery;
         }
-
+        private static string ForeignKeyWithQuery(ForeignKeyAttribute foreignKey)
+        {
+            return $"FOREIGN KEY ({foreignKey.ColumnName}) REFERENCES {foreignKey.ReferenceTableName} ({foreignKey.ReferenceFieldName}) ON DELETE {foreignKey.OnDeleteRule} ON UPDATE {foreignKey.OnUpdateRule}";
+        }
         private static string GenerateAddForeignKeyQuery(Type type, ForeignKeyAttribute foreignKeyAttribute)
         {
             var tableAttribute = (TableAttribute)type.GetCustomAttribute(typeof(TableAttribute));
