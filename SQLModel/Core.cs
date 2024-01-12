@@ -50,32 +50,35 @@ namespace SQLModel
         }
         public async Task<IDbConnection> OpenConnectionAsync()
         {
-            return await OpenConnectionIternal();
+            return await databaseProvider.OpenConnectionAsync(this.connectionString);
         }
         public IDbConnection OpenConnection()
         {
-            return OpenConnectionIternal().Result;
-        }
-        async private Task<IDbConnection> OpenConnectionIternal()
-        {
-            return await databaseProvider.OpenConnectionIternal(this.connectionString);
+            return databaseProvider.OpenConnection(this.connectionString);
         }
         public IDataReader ExecuteQuery(string sql, IDbConnection connection, IDbTransaction transaction)
         {
-            return ExecuteQueryIternal(sql, connection, transaction).Result;
-        }
-        async public Task<IDataReader> ExecuteQueryAsync(string sql, IDbConnection connection, IDbTransaction transaction)
-        {
-            return await ExecuteQueryIternal(sql, connection, transaction);
-        }
-        async private Task<IDataReader> ExecuteQueryIternal(string sql, IDbConnection connection, IDbTransaction transaction)
-        {
-            IDbCommand command = await databaseProvider.ExecuteCommand(sql, connection, transaction);
+            IDbCommand command = databaseProvider.ExecuteCommand(sql, connection, transaction);
             try
             {
                 Logging.Info($"{sql}");
 
-                return await databaseProvider.ExecuteReader(command);
+                return databaseProvider.ExecuteReader(command);
+            }
+            catch (Exception ex)
+            {
+                Logging.Error($"{sql} Details: {ex.Message}");
+                throw;
+            }
+        }
+        async public Task<IDataReader> ExecuteQueryAsync(string sql, IDbConnection connection, IDbTransaction transaction)
+        {
+            IDbCommand command = await databaseProvider.ExecuteCommandAsync(sql, connection, transaction);
+            try
+            {
+                Logging.Info($"{sql}");
+
+                return await databaseProvider.ExecuteReaderAsync(command);
             }
             catch (Exception ex)
             {
@@ -85,20 +88,28 @@ namespace SQLModel
         }
         public void ExecuteEmptyQuery(string sql, IDbConnection connection, IDbTransaction transaction)
         {
-            ExecuteEmptyQueryIternal(sql, connection, transaction).Wait();
-        }
-        async public Task ExecuteEmptyQueryAsync(string sql, IDbConnection connection, IDbTransaction transaction)
-        {
-            await ExecuteEmptyQueryIternal(sql, connection, transaction);
-        }
-        async private Task ExecuteEmptyQueryIternal(string sql, IDbConnection connection, IDbTransaction transaction)
-        {
-            using (IDbCommand command = await databaseProvider.ExecuteCommand(sql, connection, transaction))
+            using (IDbCommand command = databaseProvider.ExecuteCommand(sql, connection, transaction))
             {
                 try
                 {
                     Logging.Info($"{sql}");
-                    await databaseProvider.ExecuteNonQuery(command);
+                    databaseProvider.ExecuteNonQuery(command);
+                }
+                catch (Exception ex)
+                {
+                    Logging.Error($"{sql} Details: {ex.Message}");
+                    throw;
+                }
+            }
+        }
+        async public Task ExecuteEmptyQueryAsync(string sql, IDbConnection connection, IDbTransaction transaction)
+        {
+            using (IDbCommand command = await databaseProvider.ExecuteCommandAsync(sql, connection, transaction))
+            {
+                try
+                {
+                    Logging.Info($"{sql}");
+                    await databaseProvider.ExecuteNonQueryAsync(command);
                 }
                 catch (Exception ex)
                 {
@@ -109,51 +120,35 @@ namespace SQLModel
         }
         public IDbTransaction BeginTransaction(IDbConnection connection)
         {
-            return BeginTransactionIternal(connection).Result;
+            return databaseProvider.BeginTransaction(connection);
         }
         public async Task<IDbTransaction> BeginTransactionAsync(IDbConnection connection)
         {
-            return await BeginTransactionIternal(connection);
-        }
-        async private Task<IDbTransaction> BeginTransactionIternal(IDbConnection connection)
-        {
-            return await databaseProvider.BeginTransaction(connection);
+            return await databaseProvider.BeginTransactionAsync(connection);
         }
         public void CommitTransaction(IDbTransaction transaction)
         {
-            CommitTransactionIternal(transaction).Wait();
+            databaseProvider.CommitTransaction(transaction);
         }
         public async Task CommitTransactionAsync(IDbTransaction transaction)
         {
-            await CommitTransactionIternal(transaction);
-        }
-        async private Task CommitTransactionIternal(IDbTransaction transaction)
-        {
-            await databaseProvider.CommitTransaction(transaction);
+            await databaseProvider.CommitTransactionAsync(transaction);
         }
         public bool ReadReader(IDataReader reader)
         {
-            return ReadReaderIternal(reader).Result;
+            return databaseProvider.Read(reader);
         }
         public async Task<bool> ReadReaderAsync(IDataReader reader)
         {
-             return await ReadReaderIternal(reader);
-        }
-        private async Task<bool> ReadReaderIternal(IDataReader reader)
-        {
-            return await databaseProvider.Read(reader);
+            return await databaseProvider.ReadAsync(reader);
         }
         public void CloseConnection(IDbConnection connection)
         {
-            CloseConnectionIternal(connection).Wait();
+            databaseProvider.CloseConnection(connection);
         }
         public async Task CloseConnectionAsync(IDbConnection connection)
         {
-            await CloseConnectionIternal(connection);
-        }
-        async private Task CloseConnectionIternal(IDbConnection connection)
-        {
-            await databaseProvider.CloseConnection(connection);
+            await databaseProvider.CloseConnectionAsync(connection);
         }
         public List<object> GetForeignKeyValues(string referenceTableName, Session session, string referenceFieldName = "id")
         {

@@ -5,14 +5,22 @@ namespace SQLModel
 {
     public interface IDatabaseProvider
     {
-        Task<IDbConnection> OpenConnectionIternal(string connectionString);
-        Task CloseConnection(IDbConnection connection);
-        Task<IDbCommand> ExecuteCommand(string sql, IDbConnection connection, IDbTransaction transaction);
-        Task<IDbTransaction> BeginTransaction(IDbConnection connection);
-        Task CommitTransaction(IDbTransaction transaction);
-        Task<IDataReader> ExecuteReader(IDbCommand command);
-        Task ExecuteNonQuery(IDbCommand command);
-        Task<bool> Read(IDataReader reader);
+        Task<IDbConnection> OpenConnectionAsync(string connectionString);
+        IDbConnection OpenConnection(string connectionString);
+        Task CloseConnectionAsync(IDbConnection connection);
+        void CloseConnection(IDbConnection connection);
+        Task<IDbCommand> ExecuteCommandAsync(string sql, IDbConnection connection, IDbTransaction transaction);
+        IDbCommand ExecuteCommand(string sql, IDbConnection connection, IDbTransaction transaction);
+        Task<IDbTransaction> BeginTransactionAsync(IDbConnection connection);
+        IDbTransaction BeginTransaction(IDbConnection connection);
+        Task CommitTransactionAsync(IDbTransaction transaction);
+        void CommitTransaction(IDbTransaction transaction);
+        Task<IDataReader> ExecuteReaderAsync(IDbCommand command);
+        IDataReader ExecuteReader(IDbCommand command);
+        Task ExecuteNonQueryAsync(IDbCommand command);
+        void ExecuteNonQuery(IDbCommand command);
+        Task<bool> ReadAsync(IDataReader reader);
+        bool Read(IDataReader reader);
         string GetAutoIncrementWithType();
     }
 }
