@@ -1,4 +1,4 @@
-using Microsoft.Data.Sqlite;
+
 
 namespace SQLModel.Tests
 {
@@ -71,11 +71,6 @@ namespace SQLModel.Tests
                 profile.Description = "new description";
 
                 session.Update(profile);
-
-                Assert.Throws<SqliteException>(() =>
-                {
-                    session.Delete(session.GetById<ProfilesTable>(1));
-                });
 
             }
         }

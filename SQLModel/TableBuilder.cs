@@ -15,25 +15,22 @@ namespace SQLModel
             string createTableQuery = TableBuilder.GenerateCreateTableQuery(table, session);
             session.ExecuteNonQuery(createTableQuery);
         }
-        public static void CreateForeignKeys(Type type, Core dbcore)
+        public static void CreateForeignKeys(Type typeTable, Core dbcore)
         {
             if (dbcore.DatabaseProvider is SqliteDatabaseProvider)
             {
                 throw new NotSupportedException("SqliteDatabaseProvider does not support creating foreign keys after creating tables");
             }
 
-            PropertyInfo[] properties = type.GetProperties();
+            Table table = Metadata.TableClasses[typeTable];
             
-            foreach(PropertyInfo property in properties)
+            foreach (ForeignKeyAttribute key in table.ForeignKeys)
             {
-                var foreignKeyAttribute = (ForeignKeyAttribute)property.GetCustomAttribute(typeof(ForeignKeyAttribute));
-                if (foreignKeyAttribute != null)
+                string query = GenerateAddForeignKeyQuery(table.Name, key);
+
+                using (var session = dbcore.CreateSession())
                 {
-                    string query = GenerateAddForeignKeyQuery(type, foreignKeyAttribute);
-                    using (var session = dbcore.CreateSession())
-                    {
-                        session.ExecuteNonQuery(query);
-                    }
+                    session.ExecuteNonQuery(query);
                 }
             }
         }
@@ -71,16 +68,14 @@ namespace SQLModel
         {
             return $"FOREIGN KEY ({foreignKey.ColumnName}) REFERENCES {foreignKey.ReferenceTableName} ({foreignKey.ReferenceFieldName}) ON DELETE {foreignKey.OnDeleteRule} ON UPDATE {foreignKey.OnUpdateRule}";
         }
-        private static string GenerateAddForeignKeyQuery(Type type, ForeignKeyAttribute foreignKeyAttribute)
+        private static string GenerateAddForeignKeyQuery(string tableName, ForeignKeyAttribute foreignKey)
         {
-            var tableAttribute = (TableAttribute)type.GetCustomAttribute(typeof(TableAttribute));
-
-            return $"ALTER TABLE {tableAttribute.TableName} " +
-                $"ADD CONSTRAINT FK_{tableAttribute.TableName}_{foreignKeyAttribute.ReferenceTableName} " +
-                $"FOREIGN KEY ({foreignKeyAttribute.ColumnName}) " +
-                $"REFERENCES {foreignKeyAttribute.ReferenceTableName} ({foreignKeyAttribute.ReferenceFieldName}) " +
-                $"ON DELETE {foreignKeyAttribute.OnDeleteRule} " +
-                $"ON UPDATE {foreignKeyAttribute.OnUpdateRule};";
+            return $"ALTER TABLE {tableName} " +
+                $"ADD CONSTRAINT FK_{tableName}_{foreignKey.ReferenceTableName} " +
+                $"FOREIGN KEY ({foreignKey.ColumnName}) " +
+                $"REFERENCES {foreignKey.ReferenceTableName} ({foreignKey.ReferenceFieldName}) " +
+                $"ON DELETE {foreignKey.OnDeleteRule} " +
+                $"ON UPDATE {foreignKey.OnUpdateRule};";
         }
         //private static string GetSqlType(Type propertyType)
         //{
