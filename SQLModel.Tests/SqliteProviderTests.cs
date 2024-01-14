@@ -15,6 +15,10 @@ namespace SQLModel.Tests
             {
                 File.Delete("test.db");
             }
+            if (File.Exists("testasync.db"))
+            {
+                File.Delete("testasync.db");
+            }
 
             Core core = new Core(DatabaseEngine.Sqlite, "Data Source=test.db", true, dropErrors: true);
 
@@ -71,6 +75,49 @@ namespace SQLModel.Tests
                 profile.Description = "new description";
 
                 session.Update(profile);
+
+            }
+        }
+        [Fact]
+        public async void CrudAsyncOperationsTests()
+        {
+            Core core = new Core(DatabaseEngine.Sqlite, "Data Source=testasync.db", true, dropErrors: true);
+
+            core.Metadata.CreateAll();
+
+            using (var session = await core.CreateAsyncSession())
+            {
+                var profile = new ProfilesTable()
+                {
+                    Name = "Name",
+                    Description = "Description",
+                };
+                await session.Add(profile);
+
+                var login = new LoginsTable()
+                {
+                    Profile_id = 1,
+                };
+                await session.Add(login);
+            }
+
+            using (var session = await core.CreateAsyncSession())
+            {
+                var login1 = await session.GetById<LoginsTable>(2);
+
+                Assert.Equal(0, login1.Id);
+
+                var login = await session.GetById<LoginsTable>(1);
+
+                Assert.NotNull(login);
+
+                var profile = await session.GetById<ProfilesTable>(login.Profile_id);
+
+                profile.Name = "new name";
+
+                profile.Description = "new description";
+
+                await session.Update(profile);
 
             }
         }
