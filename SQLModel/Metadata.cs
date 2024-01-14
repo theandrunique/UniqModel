@@ -176,7 +176,6 @@ namespace SQLModel
     {
         public string ReferenceTableName { get; }
         public string ReferenceFieldName { get; }
-        public Type ReferenceClass { get; }
         public string OnDeleteRule { get; }
         public string OnUpdateRule { get; }
         public ForeignKey(ForeignKeyAttribute attribute, PropertyInfo property) 
@@ -184,7 +183,6 @@ namespace SQLModel
         {
             ReferenceTableName = attribute.ReferenceTableName; 
             ReferenceFieldName = attribute.ReferenceFieldName;
-            ReferenceClass = attribute.ReferenceClass;
             OnDeleteRule = attribute.OnDeleteRule;
             OnUpdateRule = attribute.OnUpdateRule;
         }
