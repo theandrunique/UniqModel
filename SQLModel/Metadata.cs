@@ -1,5 +1,4 @@
-﻿using NLog.LayoutRenderers;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
@@ -10,6 +9,7 @@ namespace SQLModel
     {
         private Core dbcore;
         public static Dictionary<Type, Table> TableClasses = new Dictionary<Type, Table>();
+        private readonly static List<string> tablesNames = new List<string>();
         public Metadata(Core dbcore)
         {
             Init();
@@ -22,6 +22,25 @@ namespace SQLModel
             {
                 Table t = new Table(table);
                 TableClasses[table] = t;
+            }
+            foreach (Table table in TableClasses.Values.ToList())
+            {
+                tablesNames.Add(table.Name);
+            }
+            CheckSyntaxForeignKeys();
+        }
+        private void CheckSyntaxForeignKeys()
+        {
+            foreach (Type type in TableClasses.Keys.ToList())
+            {
+                Table table = TableClasses[type];
+                foreach (ForeignKeyAttribute foreignKey in table.ForeignKeys)
+                {
+                    if (!tablesNames.Contains(foreignKey.ReferenceTableName))
+                    {
+                        throw new ArgumentException($"Foreign key reference table '{foreignKey.ReferenceTableName}' not found in the existing tables. Details: class '{type.Name}'");
+                    }
+                }
             }
         }
         private static List<Type> GetBaseModelTypes()
@@ -144,11 +163,11 @@ namespace SQLModel
             PrimaryKey = false;
             ForeignKey = false;
         }
-        public Field(FieldAttribute attribute, PropertyInfo property, bool isPrimeryKey, bool isForeignKey)
+        public Field(FieldAttribute attribute, PropertyInfo property, bool isPrimaryKey, bool isForeignKey)
         {
             Name = attribute.ColumnName;
             Type = attribute.ColumnType;
-            PrimaryKey = isPrimeryKey;
+            PrimaryKey = isPrimaryKey;
             ForeignKey = isForeignKey;
             Property = property;
         }
