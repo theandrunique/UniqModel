@@ -15,7 +15,7 @@ namespace SQLModel
             base(columnName, columnType)
         {
             try
-            {
+        {
                 string[] arr = reference.Split('.');
 
                 if (arr.Length != 2)

@@ -16,22 +16,28 @@ namespace SQLModel.Tests
                 File.Delete("test.db");
             }
 
-            Core core = new Core(DatabaseEngine.Sqlite, "Data Source=test.db", true, true, dropErrors: true);
+            Core core = new Core(DatabaseEngine.Sqlite, "Data Source=test.db", true, dropErrors: true);
+
+            core.Metadata.CreateAll();
         }
         [Fact]
         public void CheckTables()
         {
-            Core core = new Core(DatabaseEngine.Sqlite, "Data Source=test.db", false, true, dropErrors: true);
+            Core core = new Core(DatabaseEngine.Sqlite, "Data Source=test.db", true, dropErrors: true);
             using (var session = core.CreateSession())
             {
                 session.ExecuteNonQuery("select * from logins");
                 session.ExecuteNonQuery("select * from profiles");
             }
+
+            Assert.Equal<int>(2, Metadata.TableClasses.Count);
+
+
         }
         [Fact]
         public void CrudOperationsTests()
         {
-            Core core = new Core(DatabaseEngine.Sqlite, "Data Source=test.db", false, true, dropErrors: true);
+            Core core = new Core(DatabaseEngine.Sqlite, "Data Source=test.db", true, dropErrors: true);
             using (var session = core.CreateSession())
             {
                 var profile = new ProfilesTable()
@@ -73,23 +79,23 @@ namespace SQLModel.Tests
 
             }
         }
-        [Table("logins")]
         public class LoginsTable : BaseModel
         {
+            public static new string Tablename = "logins";
             [PrimaryKey("id")]
             public int Id { get; set; }
             [ForeignKey("profile_id", "int", "profiles.id", typeof(ProfilesTable))]
             public int Profile_id { get; set; }
         }
-        [Table("profiles")]
         public class ProfilesTable : BaseModel
         {
+            public static new string Tablename = "profiles";
             [PrimaryKey("id")]
             public int Id { get; set; }
             [Field("name", "text")]
-            public string Name { get; set; }
+            public string? Name { get; set; }
             [Field("description", "text")]
-            public string Description { get; set; }
+            public string? Description { get; set; }
         }
     }
 }

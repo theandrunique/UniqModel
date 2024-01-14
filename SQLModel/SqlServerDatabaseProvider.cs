@@ -6,6 +6,7 @@ namespace SQLModel
 {
     internal class SqlServerDatabaseProvider : IDatabaseProvider
     {
+#pragma warning disable CS1998
         async public Task<IDbConnection> OpenConnectionAsync(string connectionString)
         {
             SqlConnection conn = new SqlConnection(connectionString);

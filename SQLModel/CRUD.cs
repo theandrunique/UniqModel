@@ -11,7 +11,7 @@ namespace SQLModel
     {
         public static T GetById<T>(int id, Session session)
         {
-            string query = BuildSelectQueryById<T>(id);
+            string query = BuildSelectQueryById(Metadata.TableClasses[typeof(T)], id);
 
             using (IDataReader reader = session.Execute(query))
             {
@@ -20,67 +20,68 @@ namespace SQLModel
         }
         async public static Task<T> GetByIdAsync<T>(int id, AsyncSession session)
         {
-            string query = BuildSelectQueryById<T>(id);
+            string query = BuildSelectQueryById(Metadata.TableClasses[typeof(T)], id);
 
             using (IDataReader reader = await session.Execute(query))
             {
                 return await MapToObjectAsync<T>(reader, session.DbCore);
             }
         }
-        private static string BuildSelectQueryById<T>(int id)
+        private static string BuildSelectQueryById(Table table, int id)
         {
-            Type type = typeof(T);
-            return $"SELECT * FROM {GetTableName(type)} WHERE id = {id};";
+            return $"SELECT * FROM {table.Name} WHERE id = {id};";
         }
         private static async Task<T> MapToObjectAsync<T>(IDataReader reader, Core core)
         {
             Type type = typeof(T);
-            var properties = type.GetProperties();
+
+            Table table = Metadata.TableClasses[type];
+
+            var properties = table.FieldsRelation.Keys.ToArray();
+
             T obj = Activator.CreateInstance<T>();
 
             if (await core.ReadReaderAsync(reader))
             {
                 foreach (var item in properties)
                 {
-                    FieldAttribute fieldAttribute = item.GetCustomAttribute<FieldAttribute>();
+                    Field field = table.FieldsRelation[item];
 
-                    if (fieldAttribute != null)
-                    {
-                        item.SetValue(obj, Convert.ChangeType(reader[fieldAttribute.ColumnName], item.PropertyType));
-                    }
+                    item.SetValue(obj, Convert.ChangeType(reader[field.Name], item.PropertyType));
                 }
             }
 
             return obj;
         }
-        private static string BuildCreateQuery(object newObject)
+        private static string GetFields(Dictionary<PropertyInfo, Field> keyValuePairs)
         {
-            Type type = newObject.GetType();
-            var fields = type.GetProperties();
-            string fieldList = string.Join(", ", fields.Skip(1).Select(field =>
+            List<PropertyInfo> properties = keyValuePairs.Keys.ToList();
+
+            return string.Join(", ", properties.Select(property =>
             {
-                FieldAttribute fieldAttribute = field.GetCustomAttribute<FieldAttribute>();
-
-                if (fieldAttribute != null)
+                if (keyValuePairs[property].PrimaryKey)
                 {
-                    return fieldAttribute.ColumnName;
+                    return null;
                 }
+                return keyValuePairs[property].Name;
 
-                return null;
             }).Where(fieldName => fieldName != null));
-            string valueList = string.Join(", ", fields.Skip(1).Select(field =>
+        }
+        private static string GetValues(Dictionary<PropertyInfo, Field> keyValuePairs, object currentObject, bool withPrimaryKey)
+        {
+            List<PropertyInfo> properties = keyValuePairs.Keys.ToList();
+
+            return string.Join(", ", properties.Select(property =>
             {
-                FieldAttribute fieldAttribute = field.GetCustomAttribute<FieldAttribute>();
-
-                if (fieldAttribute != null)
+                if (!withPrimaryKey && keyValuePairs[property].PrimaryKey)
                 {
-                    var value = field.GetValue(newObject);
-
-                    return (field.PropertyType == typeof(string) || field.PropertyType == typeof(DateTime)) ? $"'{value}'" : value.ToString();
+                    return null;
                 }
-                return null;
-            }).Where(fieldValue => fieldValue != null));
-            return $"insert into {GetTableName(type)} ({fieldList}) values ({valueList});";
+                var value = property.GetValue(currentObject);
+
+                return (property.PropertyType == typeof(string) || property.PropertyType == typeof(DateTime)) ? $"'{value}'" : value.ToString();
+
+            }).Where(fieldName => fieldName != null));
         }
         public static void Create(object newObject, Session session)
         {
@@ -92,29 +93,53 @@ namespace SQLModel
             string query = BuildCreateQuery(newObject);
             await session.ExecuteNonQuery(query);
         }
+        private static string BuildCreateQuery(object newObject)
+        {
+            Type type = newObject.GetType(); // - class
+
+            Table table = Metadata.TableClasses[type];
+
+            string fieldList = GetFields(table.FieldsRelation);
+
+            string valueList = GetValues(table.FieldsRelation, newObject, false);
+
+            return $"INSERT INTO {table.Name} ({fieldList}) VALUES ({valueList});";
+        }
         private static string BuildUpdateQuery(object existedObject)
         {
             Type type = existedObject.GetType();
 
-            var fields = type.GetProperties();
+            Table table = Metadata.TableClasses[type];
 
-            string setClause = string.Join(", ", fields.Skip(1).Select(field =>
+            List<PropertyInfo> properties = table.FieldsRelation.Keys.ToList();
+
+            Field primaryKeyField = null;
+
+            string setClause = string.Join(", ", properties.Select(property =>
             {
-                FieldAttribute fieldAttribute = field.GetCustomAttribute<FieldAttribute>();
+                Field field = table.FieldsRelation[property];
 
-                if (fieldAttribute != null)
+                if (field.PrimaryKey)
                 {
-                    var value = field.GetValue(existedObject);
-
-                    if (field.PropertyType == typeof(string) || field.PropertyType == typeof(DateTime))
-                        return $"{fieldAttribute.ColumnName} = '{field.GetValue(existedObject)}'";
-
-                    return $"{fieldAttribute.ColumnName} = {field.GetValue(existedObject)}";
+                    primaryKeyField = field;
+                    return null;
                 }
-                return null;
+                var value = property.GetValue(existedObject);
+
+                if (property.PropertyType == typeof(string) || property.PropertyType == typeof(DateTime))
+                {
+                    return $"{field.Name} = '{value}'";
+
+                } else
+                {
+                    return $"{field.Name} = {value}";
+                }
+
             }).Where(fieldValue => fieldValue != null));
 
-            return $"UPDATE {GetTableName(type)} SET {setClause} WHERE id = {fields[0].GetValue(existedObject)};";
+            string idClause = $"{primaryKeyField.Name} = {primaryKeyField.Property.GetValue(existedObject)}";
+
+            return $"UPDATE {table.Name} SET {setClause} WHERE {idClause};";
         }
         async public static Task UpdateAsync(object existedObject, AsyncSession session)
         {
@@ -130,9 +155,13 @@ namespace SQLModel
         {
             Type type = existedObject.GetType();
 
-            var id = type.GetProperty("Id");
+            Table table = Metadata.TableClasses[type];
 
-            return $"DELETE FROM {GetTableName(type)} WHERE id = {id.GetValue(existedObject)};";
+            Field primaryKeyField = table.FieldsRelation.Values.ToList().Find(field => field.PrimaryKey);
+
+            string idClause = $"{primaryKeyField.Name} = {primaryKeyField.Property.GetValue(existedObject)}";
+
+            return $"DELETE FROM {table.Name} WHERE {idClause};";
         }
         public static void Delete(object existedObject, Session session)
         {
@@ -146,33 +175,25 @@ namespace SQLModel
 
             await session.ExecuteNonQuery(query);
         }
-        private static string GetTableName(Type type)
-        {
-            var tableAttribute = (TableAttribute)type.GetCustomAttribute(typeof(TableAttribute));
-            if (tableAttribute == null)
-            {
-                throw new ArgumentException("The class must be marked with TableAttribute.");
-            }
-            return tableAttribute.TableName;
-        }
         private static string BuildSelectAllQuery<T>()
         {
             Type type = typeof(T);
-            return $"SELECT * FROM {GetTableName(type)};";
+
+            Table table = Metadata.TableClasses[type];
+
+            return $"SELECT * FROM {table.Name};";
         }
         private static T CreateInstance<T>(IDataReader reader)
         {
             T obj = Activator.CreateInstance<T>();
-            var properties = typeof(T).GetProperties();
 
-            foreach (var item in properties)
+            Table table = Metadata.TableClasses[typeof(T)];
+
+            List<PropertyInfo> properties = table.FieldsRelation.Keys.ToList();
+
+            foreach (PropertyInfo item in properties)
             {
-                FieldAttribute fieldAttribute = item.GetCustomAttribute<FieldAttribute>();
-
-                if (fieldAttribute != null)
-                {
-                    item.SetValue(obj, Convert.ChangeType(reader[fieldAttribute.ColumnName], item.PropertyType));
-                }
+                item.SetValue(obj, Convert.ChangeType(reader[table.FieldsRelation[item].Name], item.PropertyType));
             }
             return obj;
         }

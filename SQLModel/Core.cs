@@ -15,22 +15,20 @@ namespace SQLModel
         private string connectionString;
         private IDatabaseProvider databaseProvider;
         public IDatabaseProvider DatabaseProvider { get { return databaseProvider; } }
+        public Metadata Metadata { get { return metadata; } }
+        private Metadata metadata;
         public bool DropErrors { get; set; }
-        public Core(DatabaseEngine databaseType, string connectionString, bool createTables = false, bool loggingInFile = false, string logfileName = "orm.log", bool dropErrors = false)
+        public Core(DatabaseEngine databaseType, string connectionString, bool loggingInFile = false, string logfileName = "orm.log", bool dropErrors = false)
         {
+            metadata = new Metadata(this);
+
             SelectProvider(databaseType);
 
             Logging.INIT(loggingInFile, logfileName);
 
             this.connectionString = connectionString;
 
-            if (createTables)
-            {
-                CreateTables();
-            }
-
             DropErrors = dropErrors;
-            //CheckExistedTables();
         }
         private void SelectProvider(DatabaseEngine databaseType)
         {
@@ -178,76 +176,7 @@ namespace SQLModel
         {
             return await AsyncSession.Create(this);
         }
-        private void CreateTables()
-        {
-            List<Type> typesList = GetBaseModelTypes();
-
-            foreach (var type in typesList)
-            {
-                var tableAttribute = (TableAttribute)type.GetCustomAttribute(typeof(TableAttribute));
-                if (!TableExists(tableAttribute.TableName))
-                {
-                    using (var session = new Session(this))
-                    {
-                        TableBuilder.CreateTableWithoutForeignKey(type, session);
-                    }
-                }
-            }
-            foreach (var type in typesList)
-            {
-                var tableAttribute = (TableAttribute)type.GetCustomAttribute(typeof(TableAttribute));
-                if (!TableExists(tableAttribute.TableName))
-                {
-                    using (var session = new Session(this))
-                    {
-                        TableBuilder.CreateTable(type, session);
-                    }
-                }
-            }
-            // create foreign keys
-            //bool temp = DropErrors;
-            //DropErrors = false;
-
-            //foreach (var type in typesList)
-            //{
-            //    TableBuilder.CreateForeignKeys(type, this);
-            //}
-
-            //DropErrors = temp;
-        }
-        private void CheckExistedTables()
-        {
-            List<Type> typesList = GetBaseModelTypes();
-
-            foreach (var type in typesList)
-            {
-                var tableAttribute = (TableAttribute)type.GetCustomAttribute(typeof(TableAttribute));
-
-                if (!TableExists(tableAttribute.TableName))
-                    throw new Exception($"Table {tableAttribute.TableName} does not exists");
-            }
-        }
-        static List<Type> GetBaseModelTypes()
-        {
-            List<Type> typesList = new List<Type>();
-
-            foreach (var asm in AppDomain.CurrentDomain.GetAssemblies())
-            {
-                var types = asm.GetTypes().Where(type => type.BaseType == typeof(BaseModel));
-                typesList.AddRange(types);
-            }
-
-            foreach(var type in typesList)
-            {
-                var tableAttribute = (TableAttribute)type.GetCustomAttribute(typeof(TableAttribute));
-                if (tableAttribute == null)
-                {
-                    throw new ArgumentException("The class must be marked with TableAttribute.");
-                }
-            }
-            return typesList;
-        }
-        private bool TableExists(string tableName)
+        public bool TableExists(string tableName)
         {
             bool temp = DropErrors;
             DropErrors = true;
@@ -258,12 +187,10 @@ namespace SQLModel
                 {
                     ExecuteEmptyQuery($"SELECT 1 FROM {tableName} WHERE 1=0", session.Connection, session.Transaction);
                 }
-                // Logging.Info($"Table {tableName} is verified");
                 return true;
             }
-            catch (Exception ex)
+            catch
             {
-                // Logging.Critical($"Table {tableName} does not exist. Please check the database schema. Detail: {ex.Message}");
                 return false;
             }
             finally

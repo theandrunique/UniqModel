@@ -8,8 +8,10 @@ using System.Threading.Tasks;
 
 namespace SQLModel
 {
+
     internal class SqliteDatabaseProvider : IDatabaseProvider
     {
+#pragma warning disable CS1998
         public async Task<IDbConnection> OpenConnectionAsync(string connectionString)
         {
             SqliteConnection conn = new SqliteConnection(connectionString);
@@ -23,6 +25,7 @@ namespace SQLModel
             return conn;
         }
         public async Task<IDbTransaction> BeginTransactionAsync(IDbConnection connection)
+#pragma warning restore CS1998 // В асинхронном методе отсутствуют операторы await, будет выполнен синхронный метод
         {
             return ((SqliteConnection)connection).BeginTransaction();
         }
