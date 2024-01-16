@@ -1,4 +1,5 @@
 ﻿using Microsoft.Data.Sqlite;
+using NLog;
 using System;
 using System.Collections.Generic;
 using System.Data;
@@ -18,30 +19,36 @@ namespace SQLModel
         public Metadata Metadata { get { return metadata; } }
         private Metadata metadata;
         public bool DropErrors { get; set; }
-        public Core(DatabaseEngine databaseType, string connectionString, bool loggingInFile = false, string logfileName = "orm.log", bool dropErrors = false)
+        public Core(DatabaseEngine databaseType, string connectionString, ILogger logger = null, bool dropErrors = false)
         {
             metadata = new Metadata(this);
 
             SelectProvider(databaseType);
 
-            Logging.INIT(loggingInFile, logfileName);
+            if (logger != null)
+            {
+                Logging.INIT(logger);
+            }
 
             this.connectionString = connectionString;
 
             DropErrors = dropErrors;
         }
+        private Lazy<IDatabaseProvider> sqlServerProvider = new Lazy<IDatabaseProvider>(() => new SqlServerDatabaseProvider());
+        private Lazy<IDatabaseProvider> sqliteProvider = new Lazy<IDatabaseProvider>(() => new SqliteDatabaseProvider());
+        // private Lazy<IDatabaseProvider> mySqlProvider = new Lazy<IDatabaseProvider>(() => new MySqlDatabaseProvider()); // future
         private void SelectProvider(DatabaseEngine databaseType)
         {
             switch (databaseType)
             {
                 case DatabaseEngine.SqlServer:
-                    databaseProvider = new SqlServerDatabaseProvider();
+                    databaseProvider = sqlServerProvider.Value;
                     break;
                 //case DatabaseType.MySql:
                 //    databaseProvider = new MySqlDatabaseProvider();
                 //    break;
                 case DatabaseEngine.Sqlite:
-                    databaseProvider = new SqliteDatabaseProvider();
+                    databaseProvider = sqliteProvider.Value;
                     break;
                 default:
                     throw new ArgumentOutOfRangeException(nameof(databaseType), "Unsupported database type");
@@ -180,7 +187,9 @@ namespace SQLModel
         {
             bool temp = DropErrors;
             DropErrors = true;
+            bool tempLogging = Logging.IsEnabled;
             Logging.IsEnabled = false;
+
             try
             {
                 using (var session = this.CreateSession())
@@ -196,7 +205,7 @@ namespace SQLModel
             finally
             {
                 DropErrors = temp;
-                Logging.IsEnabled = true;
+                Logging.IsEnabled = tempLogging;
             }
         }
     }

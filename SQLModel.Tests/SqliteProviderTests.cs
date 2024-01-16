@@ -1,9 +1,22 @@
 
 
+using NLog;
+using NLog.Targets;
+
 namespace SQLModel.Tests
 {
     public class SqliteProviderTests
     {
+        Logger log;
+        public void InitLogger()
+        {
+            var config = new NLog.Config.LoggingConfiguration();
+            var logFile = new FileTarget("logFile") { FileName = $"orm.log" };
+            config.AddRule(LogLevel.Info, LogLevel.Fatal, logFile);
+            LogManager.Configuration = config;
+            log = LogManager.GetCurrentClassLogger();
+        }
+
         [Fact]
         public void CreateTablesSqliteTest()
         {
@@ -20,14 +33,16 @@ namespace SQLModel.Tests
                 File.Delete("testasync.db");
             }
 
-            Core core = new Core(DatabaseEngine.Sqlite, "Data Source=test.db", true, dropErrors: true);
+            InitLogger();
+
+            Core core = new Core(DatabaseEngine.Sqlite, "Data Source=test.db", log, dropErrors: true);
 
             core.Metadata.CreateAll();
         }
         [Fact]
         public void CheckTables()
         {
-            Core core = new Core(DatabaseEngine.Sqlite, "Data Source=test.db", true, dropErrors: true);
+            Core core = new Core(DatabaseEngine.Sqlite, "Data Source=test.db", log, dropErrors: true);
             using (var session = core.CreateSession())
             {
                 session.ExecuteNonQuery("select * from logins");
@@ -41,7 +56,7 @@ namespace SQLModel.Tests
         [Fact]
         public void CrudOperationsTests()
         {
-            Core core = new Core(DatabaseEngine.Sqlite, "Data Source=test.db", true, dropErrors: true);
+            Core core = new Core(DatabaseEngine.Sqlite, "Data Source=test.db", log, dropErrors: true);
             using (var session = core.CreateSession())
             {
                 var profile = new ProfilesTable()
@@ -81,7 +96,7 @@ namespace SQLModel.Tests
         [Fact]
         public async void CrudAsyncOperationsTests()
         {
-            Core core = new Core(DatabaseEngine.Sqlite, "Data Source=testasync.db", true, dropErrors: true);
+            Core core = new Core(DatabaseEngine.Sqlite, "Data Source=testasync.db", log, dropErrors: true);
 
             core.Metadata.CreateAll();
 
@@ -118,7 +133,6 @@ namespace SQLModel.Tests
                 profile.Description = "new description";
 
                 await session.Update(profile);
-
             }
         }
         public class LoginsTable : BaseModel

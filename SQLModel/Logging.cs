@@ -5,17 +5,12 @@ namespace SQLModel
 {
     public class Logging
     {
-        private static readonly Logger log = LogManager.GetCurrentClassLogger();
-        public static bool IsEnabled = true;
-        public static void INIT(bool loggingInFile, string logfileName)
+        private static ILogger log;
+        public static bool IsEnabled = false;
+        public static void INIT(ILogger logger)
         {
-            var config = new NLog.Config.LoggingConfiguration();
-            if (loggingInFile)
-            {
-                var logFile = new FileTarget("logFile") { FileName = $"{logfileName}" };
-                config.AddRule(LogLevel.Info, LogLevel.Fatal, logFile);
-            }
-            LogManager.Configuration = config;
+            IsEnabled = true;
+            log = logger;
         }
         public static void Error(string message)
         {
