@@ -34,7 +34,7 @@ namespace SQLModel
             foreach (Type type in TableClasses.Keys.ToList())
             {
                 Table table = TableClasses[type];
-                foreach (ForeignKeyAttribute foreignKey in table.ForeignKeys)
+                foreach (ForeignKey foreignKey in table.ForeignKeys)
                 {
                     if (!tablesNames.Contains(foreignKey.ReferenceTableName))
                     {
@@ -98,7 +98,7 @@ namespace SQLModel
     {
         public string Name { get; set; }
         public List<PrimaryKeyAttribute> PrimaryKeys = new List<PrimaryKeyAttribute>();
-        public List<ForeignKeyAttribute> ForeignKeys = new List<ForeignKeyAttribute>();
+        public List<ForeignKey> ForeignKeys = new List<ForeignKey>();
         public Dictionary<PropertyInfo, Field> FieldsRelation = new Dictionary<PropertyInfo, Field>();
         public Table(Type table)
         {
@@ -135,9 +135,11 @@ namespace SQLModel
                     {
                         ForeignKeyAttribute foreignKeyAttribute = (ForeignKeyAttribute)property.GetCustomAttribute(typeof(ForeignKeyAttribute));
 
-                        ForeignKeys.Add(foreignKeyAttribute);
+                        ForeignKey newForeignKey = new ForeignKey(foreignKeyAttribute, property);
 
-                        FieldsRelation[property] = new ForeignKey(foreignKeyAttribute, property);
+                        ForeignKeys.Add(newForeignKey);
+
+                        FieldsRelation[property] = newForeignKey; 
 
                     } else if (fieldAttribute is FieldAttribute)
                     {

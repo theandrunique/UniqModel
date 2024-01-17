@@ -24,7 +24,7 @@ namespace SQLModel
 
             Table table = Metadata.TableClasses[typeTable];
             
-            foreach (ForeignKeyAttribute key in table.ForeignKeys)
+            foreach (ForeignKey key in table.ForeignKeys)
             {
                 string query = GenerateAddForeignKeyQuery(table.Name, key);
 
@@ -51,7 +51,7 @@ namespace SQLModel
                 }
             }
 
-            foreach (var foreignKey in table.ForeignKeys)
+            foreach (ForeignKey foreignKey in table.ForeignKeys)
             {
                 createTableQuery += $"{ForeignKeyWithQuery(foreignKey)}, ";
             }
@@ -64,15 +64,15 @@ namespace SQLModel
             createTableQuery = createTableQuery.TrimEnd(',', ' ') + ");";
             return createTableQuery;
         }
-        private static string ForeignKeyWithQuery(ForeignKeyAttribute foreignKey)
+        private static string ForeignKeyWithQuery(ForeignKey foreignKey)
         {
-            return $"FOREIGN KEY ({foreignKey.ColumnName}) REFERENCES {foreignKey.ReferenceTableName} ({foreignKey.ReferenceFieldName}) ON DELETE {foreignKey.OnDeleteRule} ON UPDATE {foreignKey.OnUpdateRule}";
+            return $"FOREIGN KEY ({foreignKey.Name}) REFERENCES {foreignKey.ReferenceTableName} ({foreignKey.ReferenceFieldName}) ON DELETE {foreignKey.OnDeleteRule} ON UPDATE {foreignKey.OnUpdateRule}";
         }
-        private static string GenerateAddForeignKeyQuery(string tableName, ForeignKeyAttribute foreignKey)
+        private static string GenerateAddForeignKeyQuery(string tableName, ForeignKey foreignKey)
         {
             return $"ALTER TABLE {tableName} " +
                 $"ADD CONSTRAINT FK_{tableName}_{foreignKey.ReferenceTableName} " +
-                $"FOREIGN KEY ({foreignKey.ColumnName}) " +
+                $"FOREIGN KEY ({foreignKey.Name}) " +
                 $"REFERENCES {foreignKey.ReferenceTableName} ({foreignKey.ReferenceFieldName}) " +
                 $"ON DELETE {foreignKey.OnDeleteRule} " +
                 $"ON UPDATE {foreignKey.OnUpdateRule};";
