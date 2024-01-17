@@ -34,9 +34,6 @@ namespace SQLModel
 
             metadata = new Metadata(this);
         }
-        private Lazy<IDatabaseProvider> sqlServerProvider = new Lazy<IDatabaseProvider>(() => new SqlServerDatabaseProvider());
-        private Lazy<IDatabaseProvider> sqliteProvider = new Lazy<IDatabaseProvider>(() => new SqliteDatabaseProvider());
-        // private Lazy<IDatabaseProvider> mySqlProvider = new Lazy<IDatabaseProvider>(() => new MySqlDatabaseProvider()); // future
         private void SelectProvider(DatabaseEngine databaseType)
         {
             switch (databaseType)
@@ -45,7 +42,7 @@ namespace SQLModel
                     databaseProvider = new SqlServerDatabaseProvider();
                     break;
                 //case DatabaseType.MySql:
-                //    databaseProvider = new MySqlDatabaseProvider();
+                //    databaseProvider = new MySqlDatabaseProvider(); // future
                 //    break;
                 case DatabaseEngine.Sqlite:
                     databaseProvider = new SqliteDatabaseProvider();

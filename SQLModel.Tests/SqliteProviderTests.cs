@@ -48,10 +48,7 @@ namespace SQLModel.Tests
                 session.ExecuteNonQuery("select * from logins");
                 session.ExecuteNonQuery("select * from profiles");
             }
-
             Assert.Equal<int>(2, Metadata.TableClasses.Count);
-
-
         }
         [Fact]
         public void CrudOperationsTests()
@@ -68,7 +65,7 @@ namespace SQLModel.Tests
 
                 var login = new LoginsTable()
                 {
-                    Profile_id = 1,
+                    ProfileId = 1,
                 };
                 session.Add(login);
             }
@@ -83,14 +80,13 @@ namespace SQLModel.Tests
 
                 Assert.NotNull(login);
 
-                var profile = session.GetById<ProfilesTable>(login.Profile_id);
+                var profile = session.GetById<ProfilesTable>(login.ProfileId);
 
                 profile.Name = "new name";
 
                 profile.Description = "new description";
 
                 session.Update(profile);
-
             }
         }
         [Fact]
@@ -111,7 +107,7 @@ namespace SQLModel.Tests
 
                 var login = new LoginsTable()
                 {
-                    Profile_id = 1,
+                    ProfileId = 1,
                 };
                 await session.Add(login);
             }
@@ -126,7 +122,7 @@ namespace SQLModel.Tests
 
                 Assert.NotNull(login);
 
-                var profile = await session.GetById<ProfilesTable>(login.Profile_id);
+                var profile = await session.GetById<ProfilesTable>(login.ProfileId);
 
                 profile.Name = "new name";
 
@@ -138,19 +134,19 @@ namespace SQLModel.Tests
         public class LoginsTable : BaseModel
         {
             public static new string Tablename = "logins";
-            [PrimaryKey("id")]
+            [PrimaryKey()]
             public int Id { get; set; }
-            [ForeignKey("profile_id", "profiles.id")]
-            public int Profile_id { get; set; }
+            [ForeignKey("profiles.id")]
+            public int ProfileId { get; set; }
         }
         public class ProfilesTable : BaseModel
         {
             public static new string Tablename = "profiles";
-            [PrimaryKey("id")]
+            [PrimaryKey()]
             public int Id { get; set; }
-            [Field("name")]
+            [Field()]
             public string? Name { get; set; }
-            [Field("description")]
+            [Field()]
             public string? Description { get; set; }
         }
     }

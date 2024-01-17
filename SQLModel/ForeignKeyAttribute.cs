@@ -10,11 +10,9 @@ namespace SQLModel
         public string OnDeleteRule { get; }
         public string OnUpdateRule { get; }
 
+        public ForeignKeyAttribute(string reference) : this(null, reference, null) { }
         public ForeignKeyAttribute(string columnName, string reference)
-            : this(columnName, reference, null)
-        {
-
-        }
+            : this(columnName, reference, null) { }
         public ForeignKeyAttribute(string columnName, string reference, string columnType)
             : base(columnName, columnType)
         {

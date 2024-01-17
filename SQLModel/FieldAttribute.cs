@@ -9,6 +9,7 @@ namespace SQLModel
         private string columnName;
         public string ColumnType { get { return columnType; } }
         private string columnType;
+        public FieldAttribute() { }
         public FieldAttribute(string columnName)
         {
             this.columnName = columnName;

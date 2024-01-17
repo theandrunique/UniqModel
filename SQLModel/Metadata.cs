@@ -158,7 +158,14 @@ namespace SQLModel
         public PropertyInfo Property { get; set; }
         public Field(FieldAttribute attribute, PropertyInfo property)
         {
-            Name = attribute.ColumnName;
+            if (attribute.ColumnName == null)
+            {
+                Name = property.Name;
+            }
+            else
+            {
+                Name = attribute.ColumnName;
+            }
 
             if (attribute.ColumnType == null)
             {
