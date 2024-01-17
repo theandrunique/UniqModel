@@ -58,7 +58,7 @@ namespace SQLModel
 
             if (table.PrimaryKeys.Count > 2)
             {
-                createTableQuery += "PRIMARY KEY (" + string.Join(", ", table.PrimaryKeys.Select(key => $"{key.ColumnName}")) + ")";
+                createTableQuery += "PRIMARY KEY (" + string.Join(", ", table.PrimaryKeys.Select(key => $"{key.Name}")) + ")";
             }
 
             createTableQuery = createTableQuery.TrimEnd(',', ' ') + ");";

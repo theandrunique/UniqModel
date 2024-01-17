@@ -1,5 +1,4 @@
 ﻿using NLog;
-using NLog.Targets;
 
 namespace SQLModel
 {

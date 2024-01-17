@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 
 namespace SQLModel
 {
-    internal class Crud
+    internal static class Crud
     {
         public static T GetById<T>(int id, Session session)
         {
@@ -29,7 +29,9 @@ namespace SQLModel
         }
         private static string BuildSelectQueryById(Table table, int id)
         {
-            return $"SELECT * FROM {table.Name} WHERE id = {id};";
+            //string idClause = string.Join(" AND ", table.PrimaryKeys.Select(key => $"{key.Name} = {key.Property.GetValue(existedObject)}"));
+
+            return $"SELECT * FROM {table.Name} WHERE {table.PrimaryKeys[0].Name} = {id};";
         }
         private static async Task<T> MapToObjectAsync<T>(IDataReader reader, Core core)
         {
@@ -37,13 +39,13 @@ namespace SQLModel
 
             Table table = Metadata.TableClasses[type];
 
-            var properties = table.FieldsRelation.Keys.ToArray();
+            PropertyInfo[] properties = table.FieldsRelation.Keys.ToArray();
 
             T obj = Activator.CreateInstance<T>();
 
             if (await core.ReadReaderAsync(reader))
             {
-                foreach (var item in properties)
+                foreach (PropertyInfo item in properties)
                 {
                     Field field = table.FieldsRelation[item];
 
@@ -113,15 +115,12 @@ namespace SQLModel
 
             List<PropertyInfo> properties = table.FieldsRelation.Keys.ToList();
 
-            Field primaryKeyField = null;
-
             string setClause = string.Join(", ", properties.Select(property =>
             {
                 Field field = table.FieldsRelation[property];
 
                 if (field.PrimaryKey)
                 {
-                    primaryKeyField = field;
                     return null;
                 }
                 var value = property.GetValue(existedObject);
@@ -137,7 +136,7 @@ namespace SQLModel
 
             }).Where(fieldValue => fieldValue != null));
 
-            string idClause = $"{primaryKeyField.Name} = {primaryKeyField.Property.GetValue(existedObject)}";
+            string idClause = string.Join(" AND ", table.PrimaryKeys.Select(key => $"{key.Name} = {key.Property.GetValue(existedObject)}"));
 
             return $"UPDATE {table.Name} SET {setClause} WHERE {idClause};";
         }
@@ -157,9 +156,9 @@ namespace SQLModel
 
             Table table = Metadata.TableClasses[type];
 
-            Field primaryKeyField = table.FieldsRelation.Values.ToList().Find(field => field.PrimaryKey);
+            PrimaryKey primaryKey = table.PrimaryKeys[0];
 
-            string idClause = $"{primaryKeyField.Name} = {primaryKeyField.Property.GetValue(existedObject)}";
+            string idClause = $"{primaryKey.Name} = {primaryKey.Property.GetValue(existedObject)}";
 
             return $"DELETE FROM {table.Name} WHERE {idClause};";
         }
