@@ -1,4 +1,5 @@
-﻿using System.Data;
+﻿using System;
+using System.Data;
 using System.Threading.Tasks;
 
 namespace SQLModel
@@ -21,6 +22,7 @@ namespace SQLModel
         void ExecuteNonQuery(IDbCommand command);
         Task<bool> ReadAsync(IDataReader reader);
         bool Read(IDataReader reader);
+        string GetSqlType(Type type);
         string GetAutoIncrementWithType();
     }
 }

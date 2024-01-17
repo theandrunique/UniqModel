@@ -123,6 +123,11 @@ namespace SQLModel
 
                 if (fieldAttribute != null)
                 {
+                    if (fieldAttribute.ColumnType == null)
+                    {
+                        fieldAttribute.ColumnType = Core.GetSqlType(property.PropertyType);
+                    }
+
                     if (fieldAttribute is PrimaryKeyAttribute)
                     {
                         PrimaryKeyAttribute primaryKeyAttribute = (PrimaryKeyAttribute)property.GetCustomAttribute(typeof(PrimaryKeyAttribute));
@@ -164,12 +169,10 @@ namespace SQLModel
             ForeignKey = false;
         }
         public Field(FieldAttribute attribute, PropertyInfo property, bool isPrimaryKey, bool isForeignKey)
+            : this(attribute, property)
         {
-            Name = attribute.ColumnName;
-            Type = attribute.ColumnType;
             PrimaryKey = isPrimaryKey;
             ForeignKey = isForeignKey;
-            Property = property;
         }
     }
     public class ForeignKey : Field

@@ -9,7 +9,7 @@ namespace SQLModel
         public string ReferenceFieldName { get; }
         public string OnDeleteRule { get; }
         public string OnUpdateRule { get; }
-        public ForeignKeyAttribute(string columnName, string columnType, string reference, 
+        public ForeignKeyAttribute(string columnName, string reference, string columnType = null,
             ForeignKeyRule onDeleteRule = ForeignKeyRule.Restrict, ForeignKeyRule onUpdateRule = ForeignKeyRule.Restrict) : 
             base(columnName, columnType)
         {

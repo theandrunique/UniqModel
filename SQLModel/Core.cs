@@ -14,15 +14,13 @@ namespace SQLModel
     public class Core
     {
         private string connectionString;
-        private IDatabaseProvider databaseProvider;
+        private static IDatabaseProvider databaseProvider;
         public IDatabaseProvider DatabaseProvider { get { return databaseProvider; } }
         public Metadata Metadata { get { return metadata; } }
         private Metadata metadata;
         public bool DropErrors { get; set; }
         public Core(DatabaseEngine databaseType, string connectionString, ILogger logger = null, bool dropErrors = false)
         {
-            metadata = new Metadata(this);
-
             SelectProvider(databaseType);
 
             if (logger != null)
@@ -33,6 +31,8 @@ namespace SQLModel
             this.connectionString = connectionString;
 
             DropErrors = dropErrors;
+
+            metadata = new Metadata(this);
         }
         private Lazy<IDatabaseProvider> sqlServerProvider = new Lazy<IDatabaseProvider>(() => new SqlServerDatabaseProvider());
         private Lazy<IDatabaseProvider> sqliteProvider = new Lazy<IDatabaseProvider>(() => new SqliteDatabaseProvider());
@@ -42,13 +42,13 @@ namespace SQLModel
             switch (databaseType)
             {
                 case DatabaseEngine.SqlServer:
-                    databaseProvider = sqlServerProvider.Value;
+                    databaseProvider = new SqlServerDatabaseProvider();
                     break;
                 //case DatabaseType.MySql:
                 //    databaseProvider = new MySqlDatabaseProvider();
                 //    break;
                 case DatabaseEngine.Sqlite:
-                    databaseProvider = sqliteProvider.Value;
+                    databaseProvider = new SqliteDatabaseProvider();
                     break;
                 default:
                     throw new ArgumentOutOfRangeException(nameof(databaseType), "Unsupported database type");
@@ -155,6 +155,10 @@ namespace SQLModel
         public async Task CloseConnectionAsync(IDbConnection connection)
         {
             await databaseProvider.CloseConnectionAsync(connection);
+        }
+        public static string GetSqlType(Type type)
+        {
+            return databaseProvider.GetSqlType(type);
         }
         public List<object> GetForeignKeyValues(string referenceTableName, Session session, string referenceFieldName = "id")
         {

@@ -6,10 +6,10 @@ namespace SQLModel
     public class FieldAttribute : Attribute
     {
         public string ColumnName { get; }
-        public string ColumnType { get; }
+        public string ColumnType { get; set; }
         public bool IsPrimaryKey { get; }
         public bool IsForeignKey { get; }
-        public FieldAttribute(string columnName, string columnType)
+        public FieldAttribute(string columnName, string columnType = null)
         {
             ColumnName = columnName;
             ColumnType = columnType;

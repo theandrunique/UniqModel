@@ -1,4 +1,6 @@
-﻿using System.Data;
+﻿using System;
+using System.Collections.Generic;
+using System.Data;
 using System.Data.SqlClient;
 using System.Threading.Tasks;
 
@@ -78,6 +80,39 @@ namespace SQLModel
         public string GetAutoIncrementWithType()
         {
             return "INT IDENTITY(1,1) PRIMARY KEY";
+        }
+        public string GetSqlType(Type type)
+        {
+            switch (Type.GetTypeCode(type))
+            {
+                case TypeCode.Int16:
+                    return "SMALLINT";
+                case TypeCode.Int32:
+                    return "INT";
+                case TypeCode.Int64:
+                    return "BIGINT";
+                case TypeCode.UInt16:
+                    return "SMALLINT";
+                case TypeCode.UInt32:
+                    return "INT";
+                case TypeCode.UInt64:
+                    return "BIGINT";
+                case TypeCode.Single:
+                    return "REAL";
+                case TypeCode.Double:
+                    return "FLOAT";
+                case TypeCode.Decimal:
+                    return "DECIMAL(18,2)";
+                case TypeCode.String:
+                    return "NVARCHAR(MAX)";
+                case TypeCode.Boolean:
+                    return "BIT";
+                case TypeCode.DateTime:
+                    return "DATETIME";
+                default:
+                    throw new ArgumentException($"Unsupported C# type: {type}");
+            }
+
         }
     }
 }
