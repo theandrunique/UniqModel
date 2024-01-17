@@ -123,11 +123,6 @@ namespace SQLModel
 
                 if (fieldAttribute != null)
                 {
-                    if (fieldAttribute.ColumnType == null)
-                    {
-                        fieldAttribute.ColumnType = Core.GetSqlType(property.PropertyType);
-                    }
-
                     if (fieldAttribute is PrimaryKeyAttribute)
                     {
                         PrimaryKeyAttribute primaryKeyAttribute = (PrimaryKeyAttribute)property.GetCustomAttribute(typeof(PrimaryKeyAttribute));
@@ -148,7 +143,6 @@ namespace SQLModel
                     {
                         FieldsRelation[property] = new Field(fieldAttribute, property);
                     }
-
                 }
             }
         }
@@ -163,7 +157,16 @@ namespace SQLModel
         public Field(FieldAttribute attribute, PropertyInfo property)
         {
             Name = attribute.ColumnName;
-            Type = attribute.ColumnType;
+
+            if (attribute.ColumnType == null)
+            {
+                Type = Core.GetSqlType(property.PropertyType);
+            }
+            else
+            {
+                Type = attribute.ColumnType;
+            }
+
             Property = property;
             PrimaryKey = false;
             ForeignKey = false;

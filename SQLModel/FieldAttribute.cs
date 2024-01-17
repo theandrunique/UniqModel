@@ -5,14 +5,20 @@ namespace SQLModel
     [AttributeUsage(AttributeTargets.Property)]
     public class FieldAttribute : Attribute
     {
-        public string ColumnName { get; }
-        public string ColumnType { get; set; }
+        public string ColumnName { get { return columnName; } }
+        private string columnName;
+        public string ColumnType { get { return columnType; } }
+        private string columnType;
         public bool IsPrimaryKey { get; }
         public bool IsForeignKey { get; }
-        public FieldAttribute(string columnName, string columnType = null)
+        public FieldAttribute(string columnName)
         {
-            ColumnName = columnName;
-            ColumnType = columnType;
+            this.columnName = columnName;
+        }
+        public FieldAttribute(string columnName, string columnType)
+            : this(columnName)
+        {
+            this.columnType = columnType;
         }
         public FieldAttribute(string columnName, string columnType, bool isPrimaryKey, bool isForeignKey)
             : this(columnName, columnType)

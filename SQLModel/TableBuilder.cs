@@ -38,13 +38,13 @@ namespace SQLModel
         {
             string createTableQuery = $"CREATE TABLE {table.Name} (";
 
-            foreach (var item in table.FieldsRelation.Keys)
+            foreach (PropertyInfo item in table.FieldsRelation.Keys)
             {
-                var field = table.FieldsRelation[item];
+                Field field = table.FieldsRelation[item];
 
                 if (table.PrimaryKeys.Count < 2 && field.PrimaryKey)
                 {
-                    createTableQuery += $"{field.Name} {field.Type} {session.DbCore.DatabaseProvider.GetAutoIncrementWithType()}, ";
+                    createTableQuery += $"{field.Name} {session.DbCore.DatabaseProvider.GetAutoIncrementWithType()}, ";
                 } else
                 {
                     createTableQuery += $"{field.Name} {field.Type}, ";

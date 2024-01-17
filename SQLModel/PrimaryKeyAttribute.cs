@@ -5,7 +5,7 @@ namespace SQLModel
     [AttributeUsage(AttributeTargets.Property)]
     public class PrimaryKeyAttribute : FieldAttribute
     {
-        public PrimaryKeyAttribute(string columnName) : base(columnName, null)
+        public PrimaryKeyAttribute(string columnName) : base(columnName)
         {
         }
     }
