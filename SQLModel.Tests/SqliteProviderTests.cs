@@ -140,7 +140,7 @@ namespace SQLModel.Tests
             public static new string Tablename = "logins";
             [PrimaryKey("id")]
             public int Id { get; set; }
-            [ForeignKey("profile_id", "int", "profiles.id")]
+            [ForeignKey("profile_id", "profiles.id")]
             public int Profile_id { get; set; }
         }
         public class ProfilesTable : BaseModel
@@ -148,9 +148,9 @@ namespace SQLModel.Tests
             public static new string Tablename = "profiles";
             [PrimaryKey("id")]
             public int Id { get; set; }
-            [Field("name", "text")]
+            [Field("name")]
             public string? Name { get; set; }
-            [Field("description", "text")]
+            [Field("description")]
             public string? Description { get; set; }
         }
     }
