@@ -9,8 +9,6 @@ namespace SQLModel
         private string columnName;
         public string ColumnType { get { return columnType; } }
         private string columnType;
-        public bool IsPrimaryKey { get; }
-        public bool IsForeignKey { get; }
         public FieldAttribute(string columnName)
         {
             this.columnName = columnName;
@@ -19,12 +17,6 @@ namespace SQLModel
             : this(columnName)
         {
             this.columnType = columnType;
-        }
-        public FieldAttribute(string columnName, string columnType, bool isPrimaryKey, bool isForeignKey)
-            : this(columnName, columnType)
-        {
-            IsForeignKey = isForeignKey;
-            IsPrimaryKey = isPrimaryKey;
         }
     }
 }
