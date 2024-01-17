@@ -97,7 +97,7 @@ namespace SQLModel
     public class Table
     {
         public string Name { get; set; }
-        public List<PrimaryKeyAttribute> PrimaryKeys = new List<PrimaryKeyAttribute>();
+        public List<PrimaryKey> PrimaryKeys = new List<PrimaryKey>();
         public List<ForeignKey> ForeignKeys = new List<ForeignKey>();
         public Dictionary<PropertyInfo, Field> FieldsRelation = new Dictionary<PropertyInfo, Field>();
         public Table(Type table)
@@ -127,9 +127,11 @@ namespace SQLModel
                     {
                         PrimaryKeyAttribute primaryKeyAttribute = (PrimaryKeyAttribute)property.GetCustomAttribute(typeof(PrimaryKeyAttribute));
 
-                        PrimaryKeys.Add(primaryKeyAttribute);
+                        PrimaryKey primaryKey = new PrimaryKey(primaryKeyAttribute, property);
 
-                        FieldsRelation[property] = new Field(primaryKeyAttribute, property, true, false);
+                        PrimaryKeys.Add(primaryKey);
+
+                        FieldsRelation[property] = primaryKey;
                     }
                     else if (fieldAttribute is ForeignKeyAttribute)
                     {
@@ -201,5 +203,10 @@ namespace SQLModel
             OnDeleteRule = attribute.OnDeleteRule;
             OnUpdateRule = attribute.OnUpdateRule;
         }
+    }
+    public class PrimaryKey : Field
+    {
+        public PrimaryKey(FieldAttribute attribute, PropertyInfo property)
+            : base(attribute, property, true, false) { }
     }
 }
