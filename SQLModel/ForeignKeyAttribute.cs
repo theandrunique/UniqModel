@@ -34,6 +34,14 @@ namespace SQLModel
                 throw new ArgumentException("Invalid ForeignKeyAttribute", ex);
             }
         }
+        public ForeignKeyAttribute(string reference, ForeignKeyRule onDeleteRule)
+            : this(reference, null, null, onDeleteRule) { }
+        public ForeignKeyAttribute(string reference, ForeignKeyRule onDeleteRule, ForeignKeyRule onUpdateRule)
+            : this(reference, null, null, onDeleteRule, onUpdateRule) { }
+        public ForeignKeyAttribute(string reference, string columnName, ForeignKeyRule onDeleteRule)
+            : this(reference, columnName, null, onDeleteRule) { }
+        public ForeignKeyAttribute(string reference, string columnName, ForeignKeyRule onDeleteRule, ForeignKeyRule onUpdateRule)
+            : this(reference, columnName, null, onDeleteRule, onUpdateRule) { }
         public ForeignKeyAttribute(string reference, string columnName, string columnType, ForeignKeyRule onDeleteRule)
             : this(reference, columnName, columnType)
         {
