@@ -10,10 +10,10 @@ namespace SQLModel
         public string OnDeleteRule { get; }
         public string OnUpdateRule { get; }
 
-        public ForeignKeyAttribute(string reference) : this(null, reference, null) { }
-        public ForeignKeyAttribute(string columnName, string reference)
-            : this(columnName, reference, null) { }
-        public ForeignKeyAttribute(string columnName, string reference, string columnType)
+        public ForeignKeyAttribute(string reference) : this(reference, null, null) { }
+        public ForeignKeyAttribute(string reference, string columnName)
+            : this(reference, columnName, null) { }
+        public ForeignKeyAttribute(string reference, string columnName, string columnType)
             : base(columnName, columnType)
         {
             try
@@ -34,13 +34,13 @@ namespace SQLModel
                 throw new ArgumentException("Invalid ForeignKeyAttribute", ex);
             }
         }
-        public ForeignKeyAttribute(string columnName, string reference, string columnType, ForeignKeyRule onDeleteRule)
-            : this(columnName, reference, columnType)
+        public ForeignKeyAttribute(string reference, string columnName, string columnType, ForeignKeyRule onDeleteRule)
+            : this(reference, columnName, columnType)
         {
             OnDeleteRule = ForeignKeyRuleMapper.MapToSql(onDeleteRule);
         }
-        public ForeignKeyAttribute(string columnName, string reference, string columnType, ForeignKeyRule onDeleteRule, ForeignKeyRule onUpdateRule)
-            : this(columnName, reference, columnType)
+        public ForeignKeyAttribute(string reference, string columnName, string columnType, ForeignKeyRule onDeleteRule, ForeignKeyRule onUpdateRule)
+            : this(reference, columnName, columnType)
         {
             OnDeleteRule = ForeignKeyRuleMapper.MapToSql(onDeleteRule);
             OnUpdateRule = ForeignKeyRuleMapper.MapToSql(onUpdateRule);
