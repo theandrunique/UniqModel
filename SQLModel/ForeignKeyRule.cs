@@ -6,8 +6,9 @@ namespace SQLModel
     {
         Cascade,
         SetNull,
-        Restrict,
+        NoAction,
     }
+
     internal static class ForeignKeyRuleMapper
     {
         public static string MapToSql(ForeignKeyRule rule)
@@ -18,8 +19,8 @@ namespace SQLModel
                     return "CASCADE";
                 case ForeignKeyRule.SetNull:
                     return "SET NULL";
-                case ForeignKeyRule.Restrict:
-                    return "RESTRICT";
+                case ForeignKeyRule.NoAction:
+                    return "NO ACTION";
                 default:
                     throw new ArgumentOutOfRangeException(nameof(rule), $"Unsupported foreign key rule: {rule}");
             }

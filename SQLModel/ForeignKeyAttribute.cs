@@ -26,8 +26,8 @@ namespace SQLModel
                 }
                 ReferenceTableName = arr[0];
                 ReferenceFieldName = arr[1];
-                OnDeleteRule = ForeignKeyRuleMapper.MapToSql(ForeignKeyRule.Restrict);
-                OnUpdateRule = ForeignKeyRuleMapper.MapToSql(ForeignKeyRule.Restrict);
+                OnDeleteRule = ForeignKeyRuleMapper.MapToSql(ForeignKeyRule.NoAction);
+                OnUpdateRule = ForeignKeyRuleMapper.MapToSql(ForeignKeyRule.NoAction);
             }
             catch (Exception ex)
             {
