@@ -9,7 +9,6 @@ namespace SQLModel
     {
         private Core dbcore;
         public static Dictionary<Type, Table> TableClasses = new Dictionary<Type, Table>();
-        private readonly static List<string> tablesNames = new List<string>();
         public Metadata(Core dbcore)
         {
             Init();
@@ -23,22 +22,38 @@ namespace SQLModel
                 Table t = new Table(table);
                 TableClasses[table] = t;
             }
+
+            CheckForeignKeysSyntax();
+        }
+        private void CheckForeignKeysSyntax()
+        {
+            Dictionary<string, Table> tablesNames = new Dictionary<string, Table>();
+
             foreach (Table table in TableClasses.Values.ToList())
             {
-                tablesNames.Add(table.Name);
+                tablesNames[table.Name] = table;
             }
-            CheckSyntaxForeignKeys();
-        }
-        private void CheckSyntaxForeignKeys()
-        {
-            foreach (Type type in TableClasses.Keys.ToList())
+
+            foreach (Type tableClass in TableClasses.Keys.ToList())
             {
-                Table table = TableClasses[type];
+                Table table = TableClasses[tableClass];
+
                 foreach (ForeignKey foreignKey in table.ForeignKeys)
                 {
-                    if (!tablesNames.Contains(foreignKey.ReferenceTableName))
+                    if (!tablesNames.ContainsKey(foreignKey.ReferenceTableName))
                     {
-                        throw new ArgumentException($"Foreign key reference table '{foreignKey.ReferenceTableName}' not found in the existing tables. Details: class '{type.Name}'");
+                        throw new ArgumentException($"Foreign key reference table '{foreignKey.ReferenceTableName}' not found in the existing tables. Details: class '{tableClass.Name}'");
+                    }
+                    Table referencedTable = tablesNames[foreignKey.ReferenceTableName];
+
+                    List<string> fields = referencedTable.FieldsRelation.Values.Select(f => f.Name).ToList();
+                    if (!fields.Contains(foreignKey.ReferenceFieldName))
+                    {
+                        throw new ArgumentException($"Field '{foreignKey.ReferenceFieldName}' not found in the referenced table '{foreignKey.ReferenceTableName}'. Details: class '{tableClass.Name}', foreign key property name: '{foreignKey.Property.Name}'");
+                    }
+                    if (!referencedTable.PrimaryKeys.Select(pk => pk.Name).ToList().Contains(foreignKey.ReferenceFieldName))
+                    {
+                        Logging.Warning($"Foreign key '{foreignKey.Name}' in table '{table.Name}' references a non-primary key field in the table '{foreignKey.ReferenceTableName}'. Details: class '{tableClass.Name}', foreign key property name: '{foreignKey.Property.Name}'");
                     }
                 }
             }
