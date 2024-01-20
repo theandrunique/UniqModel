@@ -7,15 +7,7 @@ namespace SQLModel.Tests
 {
     public class SqliteProviderTests
     {
-        Logger log;
-        public void InitLogger()
-        {
-            var config = new NLog.Config.LoggingConfiguration();
-            var logFile = new FileTarget("logFile") { FileName = $"orm.log" };
-            config.AddRule(LogLevel.Info, LogLevel.Fatal, logFile);
-            LogManager.Configuration = config;
-            log = LogManager.GetCurrentClassLogger();
-        }
+        Logger log = LogManager.GetCurrentClassLogger();
 
         [Fact]
         public void CreateTablesSqliteTest()
@@ -33,7 +25,10 @@ namespace SQLModel.Tests
                 File.Delete("testasync.db");
             }
 
-            InitLogger();
+            var config = new NLog.Config.LoggingConfiguration();
+            var logFile = new FileTarget("logFile") { FileName = $"orm.log" };
+            config.AddRule(LogLevel.Info, LogLevel.Fatal, logFile);
+            LogManager.Configuration = config;
 
             Core core = new Core(DatabaseEngine.Sqlite, "Data Source=test.db", log, dropErrors: true);
 

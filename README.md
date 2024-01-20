@@ -23,7 +23,7 @@ cd dotnet_orm/
 
 ### Table Representation
 
-```
+```csharp
 // All models should inherit from BaseModel
 class AccountTable : BaseModel
 {
@@ -46,7 +46,7 @@ In the database, it would be something like this:
 
 #### Interact with the database
 
-```
+```csharp
 int main()
 {
     // Create an instance of Core

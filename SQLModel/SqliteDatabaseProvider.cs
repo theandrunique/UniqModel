@@ -33,6 +33,7 @@ namespace SQLModel
         {
             return ((SqliteConnection)connection).BeginTransaction();
         }
+#pragma warning disable CS1998
         public async Task CloseConnectionAsync(IDbConnection connection)
         {
             ((SqliteConnection)connection).Close();
