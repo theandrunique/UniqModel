@@ -136,7 +136,7 @@ namespace SQLModel.Tests
             public static new string Tablename = "logins";
             [PrimaryKey()]
             public int Id { get; set; }
-            [ForeignKey("profiles.id")]
+            [ForeignKey("profiles.Id")]
             public int ProfileId { get; set; }
         }
         public class ProfilesTable : BaseModel
