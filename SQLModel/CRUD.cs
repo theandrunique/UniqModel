@@ -15,7 +15,11 @@ namespace SQLModel
 
             using (IDataReader reader = session.Execute(query))
             {
-                return MapToObjectAsync<T>(reader, session.DbCore).Result;
+                if (reader.Read())
+                {
+                    return MapToObject<T>(reader);
+                }
+                else { return default(T); }
             }
         }
         async public static Task<T> GetByIdAsync<T>(int id, AsyncSession session)
@@ -24,7 +28,11 @@ namespace SQLModel
 
             using (IDataReader reader = await session.Execute(query))
             {
-                return await MapToObjectAsync<T>(reader, session.DbCore);
+                if (await session.DbCore.ReadReaderAsync(reader))
+                {
+                    return MapToObject<T>(reader);
+                }
+                else { return default(T); }
             }
         }
         private static string BuildSelectQueryById(Table table, int id)
@@ -33,7 +41,7 @@ namespace SQLModel
 
             return $"SELECT * FROM {table.Name} WHERE {table.PrimaryKeys[0].Name} = {id};";
         }
-        private static async Task<T> MapToObjectAsync<T>(IDataReader reader, Core core)
+        private static T MapToObject<T>(IDataReader reader)
         {
             Type type = typeof(T);
 
@@ -42,15 +50,11 @@ namespace SQLModel
             PropertyInfo[] properties = table.FieldsRelation.Keys.ToArray();
 
             T obj = Activator.CreateInstance<T>();
-
-            if (await core.ReadReaderAsync(reader))
+            foreach (PropertyInfo item in properties)
             {
-                foreach (PropertyInfo item in properties)
-                {
-                    Field field = table.FieldsRelation[item];
+                Field field = table.FieldsRelation[item];
 
-                    item.SetValue(obj, Convert.ChangeType(reader[field.Name], item.PropertyType));
-                }
+                item.SetValue(obj, Convert.ChangeType(reader[field.Name], item.PropertyType));
             }
 
             return obj;

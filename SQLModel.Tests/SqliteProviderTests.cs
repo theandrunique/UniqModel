@@ -27,6 +27,9 @@ namespace SQLModel.Tests
 
             var config = new NLog.Config.LoggingConfiguration();
             var logFile = new FileTarget("logFile") { FileName = $"orm.log" };
+            var logconsole = new ConsoleTarget("logconsole");
+
+            config.AddRule(LogLevel.Info, LogLevel.Fatal, logconsole);
             config.AddRule(LogLevel.Info, LogLevel.Fatal, logFile);
             LogManager.Configuration = config;
 
@@ -36,17 +39,6 @@ namespace SQLModel.Tests
         }
         [Fact]
         public void CheckTables()
-        {
-            Core core = new Core(DatabaseEngine.Sqlite, "Data Source=test.db", log, dropErrors: true);
-            using (var session = core.CreateSession())
-            {
-                session.ExecuteNonQuery("select * from logins");
-                session.ExecuteNonQuery("select * from profiles");
-            }
-            Assert.Equal<int>(2, Metadata.TableClasses.Count);
-        }
-        [Fact]
-        public void CrudOperationsTests()
         {
             Core core = new Core(DatabaseEngine.Sqlite, "Data Source=test.db", log, dropErrors: true);
             using (var session = core.CreateSession())
@@ -69,7 +61,7 @@ namespace SQLModel.Tests
             {
                 var login1 = session.GetById<LoginsTable>(2);
 
-                Assert.Equal(0, login1.Id);
+                Assert.Null(login1);
 
                 var login = session.GetById<LoginsTable>(1);
 
@@ -111,7 +103,7 @@ namespace SQLModel.Tests
             {
                 var login1 = await session.GetById<LoginsTable>(2);
 
-                Assert.Equal(0, login1.Id);
+                Assert.Null(login1);
 
                 var login = await session.GetById<LoginsTable>(1);
 

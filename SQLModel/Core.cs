@@ -1,38 +1,39 @@
-﻿using Microsoft.Data.Sqlite;
-using NLog;
+﻿using NLog;
 using System;
-using System.Collections.Generic;
 using System.Data;
-using System.Data.Common;
-using System.Data.SqlClient;
-using System.Linq;
-using System.Reflection;
 using System.Threading.Tasks;
 
 namespace SQLModel
 {
     public class Core
     {
+        public string ConnectionString { get { return connectionString; } }
         private string connectionString;
         private static IDatabaseProvider databaseProvider;
         public IDatabaseProvider DatabaseProvider { get { return databaseProvider; } }
         public Metadata Metadata { get { return metadata; } }
         private Metadata metadata;
         public bool DropErrors { get; set; }
-        public Core(DatabaseEngine databaseType, string connectionString, ILogger logger = null, bool dropErrors = false)
+        public bool AutoCommit { get; set; } = true;
+        public Core(DatabaseEngine databaseEngine, string connectionString, ILogger logger, bool dropErrors)
         {
-            SelectProvider(databaseType);
-
-            if (logger != null)
-            {
-                Logging.INIT(logger);
-            }
+            SelectProvider(databaseEngine);
 
             this.connectionString = connectionString;
+
+            SetupLogger(logger);
 
             DropErrors = dropErrors;
 
             metadata = new Metadata(this);
+        }
+        public Core(DatabaseEngine databaseEngine, string connectionString)
+            : this (databaseEngine, connectionString, null, false) { }
+        public Core(DatabaseEngine databaseEngine, string connectionString, bool dropErrors)
+            : this(databaseEngine, connectionString, null, dropErrors) { }
+        public void SetupLogger(ILogger logger)
+        {
+            Logging.INIT(logger);
         }
         private void SelectProvider(DatabaseEngine databaseType)
         {
@@ -145,6 +146,10 @@ namespace SQLModel
         {
             return await databaseProvider.ReadAsync(reader);
         }
+        public async Task CloseReaderAsync(IDataReader reader)
+        {
+            await databaseProvider.CloseReaderAsync(reader);
+        }
         public void CloseConnection(IDbConnection connection)
         {
             databaseProvider.CloseConnection(connection);
@@ -156,21 +161,6 @@ namespace SQLModel
         public static string GetSqlType(Type type)
         {
             return databaseProvider.GetSqlType(type);
-        }
-        public List<object> GetForeignKeyValues(string referenceTableName, Session session, string referenceFieldName = "id")
-        {
-            List<object> values = new List<object>();
-
-            string query = $"SELECT DISTINCT {referenceFieldName} FROM {referenceTableName};";
-
-            using (IDataReader reader = session.Execute(query))
-            {
-                while (reader.Read())
-                {
-                    values.Add(reader[referenceFieldName]);
-                }
-                return values;
-            }
         }
         public string GetAutoIncrementWithType()
         {

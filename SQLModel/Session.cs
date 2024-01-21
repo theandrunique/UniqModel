@@ -35,28 +35,33 @@ namespace SQLModel
         }
         public void Dispose()
         {
-            foreach (var reader in readerPool)
-            {
-                if (!reader.IsClosed)
-                {
-                    reader.Close();
-                }
-            }
+            CloseReaders();
             try
             {
-                dbcore.CommitTransaction(transaction);
-                Logging.Info($"COMMIT");
+                if (dbcore.AutoCommit)
+                {
+                    Commit();
+                }
             }
             catch (Exception ex)
             {
                 Logging.Info($"ROLLBACK ({ex.Message})");
-                throw ex;
+                throw;
             }
             finally
             {
                 dbcore.CloseConnection(conn);
                 expired = true;
             }
+        }
+        public void Commit()
+        {
+            dbcore.CommitTransaction(transaction);
+            Logging.Info($"COMMIT");
+        }
+        public void Rollback()
+        {
+            transaction.Rollback();
         }
         public T GetById<T>(int id)
         {
@@ -87,7 +92,6 @@ namespace SQLModel
             }
             catch
             {
-                expired = true;
                 if (dbcore.DropErrors)
                     throw;
             }
@@ -97,13 +101,13 @@ namespace SQLModel
             CheckIsExpired();
             try
             {
+                CloseReaders();
                 IDataReader reader = dbcore.ExecuteQuery(query, conn, transaction);
                 readerPool.Add(reader);
                 return reader;
             }
             catch
             {
-                expired = true;
                 if (dbcore.DropErrors)
                     throw;
                 return null;
@@ -115,6 +119,15 @@ namespace SQLModel
             {
                 throw new Exception("The session is closed or expired due to an exception");
             }
+        }
+        private void CloseReaders()
+        {
+            foreach (IDataReader item in readerPool)
+            {
+                if (!item.IsClosed)
+                    item.Close();
+            }
+            readerPool.Clear();
         }
     }
 }

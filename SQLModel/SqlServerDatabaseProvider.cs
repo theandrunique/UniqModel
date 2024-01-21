@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Data;
 using System.Data.SqlClient;
 using System.Threading.Tasks;
@@ -76,6 +75,14 @@ namespace SQLModel
         public bool Read(IDataReader reader)
         {
             return ((SqlDataReader)reader).Read();
+        }
+        public async Task CloseReaderAsync(IDataReader reader)
+        {
+#if NET48
+            ((SqlDataReader)reader).Close();
+#else
+            await ((SqlDataReader)reader).CloseAsync();
+#endif
         }
         public string GetAutoIncrementWithType()
         {

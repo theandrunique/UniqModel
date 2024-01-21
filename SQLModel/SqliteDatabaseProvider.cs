@@ -82,6 +82,14 @@ namespace SQLModel
         {
             return ((SqliteDataReader)reader).Read();
         }
+        public async Task CloseReaderAsync(IDataReader reader)
+        {
+#if NET48
+            ((SqliteDataReader)reader).Close();
+#else
+            await ((SqliteDataReader)reader).CloseAsync();
+#endif
+        }
         public string GetAutoIncrementWithType()
         {
             return "INTEGER PRIMARY KEY AUTOINCREMENT";

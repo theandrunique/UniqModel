@@ -22,6 +22,7 @@ namespace SQLModel
         void ExecuteNonQuery(IDbCommand command);
         Task<bool> ReadAsync(IDataReader reader);
         bool Read(IDataReader reader);
+        Task CloseReaderAsync(IDataReader reader);
         string GetSqlType(Type type);
         string GetAutoIncrementWithType();
     }

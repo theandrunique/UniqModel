@@ -41,27 +41,33 @@ namespace SQLModel
         }
         public async void Dispose()
         {
-            foreach (var reader in readerPool)
-            {
-                if (!reader.IsClosed)
-                {
-                    reader.Close();
-                }
-            }
+            await CloseReaders();
             try
             {
-                await dbcore.CommitTransactionAsync(transaction);
-                Logging.Info($"COMMIT");
+                if (dbcore.AutoCommit)
+                {
+                    await Commit();
+                }
             }
             catch (Exception ex)
             {
-                Logging.Info($"ROLLBACK ({ex.Message})");;
+                Logging.Info($"ROLLBACK ({ex.Message})");
+                throw;
             }
             finally
             {
                 await dbcore.CloseConnectionAsync(conn);
                 expired = true;
             }
+        }
+        public async Task Commit()
+        {
+            await dbcore.CommitTransactionAsync(transaction);
+            Logging.Info($"COMMIT");
+        }
+        public async Task RollBack()
+        {
+            transaction.Rollback();
         }
         async public Task<T> GetById<T>(int id)
         {
@@ -92,7 +98,6 @@ namespace SQLModel
             }
             catch
             {
-                expired = true;
                 if (dbcore.DropErrors)
                     throw;
             }
@@ -102,13 +107,13 @@ namespace SQLModel
             CheckIsExpired();
             try
             {
+                await CloseReaders();
                 IDataReader reader = await dbcore.ExecuteQueryAsync(query, conn, transaction);
                 readerPool.Add(reader);
                 return reader;
             }
             catch
             {
-                expired = true;
                 if (dbcore.DropErrors)
                     throw;
                 return null;
@@ -124,6 +129,15 @@ namespace SQLModel
             {
                 throw new Exception("The session is closed or expired due to an exception");
             }
+        }
+        private async Task CloseReaders()
+        {
+            foreach (IDataReader item in readerPool)
+            {
+                if (!item.IsClosed)
+                    await dbcore.CloseReaderAsync(item);
+            }
+            readerPool.Clear();
         }
     }
 }
