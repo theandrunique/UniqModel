@@ -1,13 +1,13 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>net48</TargetFramework>
-    <UseWPF>true</UseWPF>
-    <GeneratePackageOnBuild>True</GeneratePackageOnBuild>
+    <AssemblyName>theandru-dotnet-orm</AssemblyName>
+	<Title>theandru-dotnet-orm</Title>  
     <PackageId>theandru-dotnet-orm</PackageId>
-    <Title>SQLModel</Title>
-    <AssemblyVersion>1.0.1.1</AssemblyVersion>
-    <Version>1.1.0</Version>
+	<PackageTags>orm;micro-orm;sql</PackageTags>
+    <TargetFrameworks>net48;net5.0;net7.0</TargetFrameworks>
+    <GeneratePackageOnBuild>True</GeneratePackageOnBuild>
+	<AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
 
   <ItemGroup>
@@ -15,5 +15,4 @@
     <PackageReference Include="NLog" Version="5.2.8" />
     <PackageReference Include="System.Data.SqlClient" Version="4.8.5" />
   </ItemGroup>
-
 </Project>
