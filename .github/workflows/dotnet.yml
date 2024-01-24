@@ -32,10 +32,5 @@ jobs:
     - name: Test
       run: dotnet test SQLModel.Tests/SQLModel.Tests.csproj -c Release --verbosity normal
 
-    - name: Check version.md
-      run: |
-        git diff --name-only ${{github.event.before}} ${{github.sha}} | grep 'version.md' && echo "VERSION_CHANGED=true" >> $GITHUB_ENV
-
     - name: Publish the package to GPR
-      if: ${{ env.VERSION_CHANGED == 'true' }}
       run: dotnet nuget push SQLModel/bin/Release/*.nupkg --source https://api.nuget.org/v3/index.json --skip-duplicate --api-key ${{secrets.NUGET_API_KEY}}
