@@ -45,8 +45,8 @@ namespace SQLModel.Tests
             var logFile = new FileTarget("logFile") { FileName = $"orm.log" };
             var logconsole = new ConsoleTarget("logconsole");
 
-            config.AddRule(LogLevel.Info, LogLevel.Fatal, logconsole);
-            config.AddRule(LogLevel.Info, LogLevel.Fatal, logFile);
+            config.AddRule(LogLevel.Debug, LogLevel.Fatal, logconsole);
+            config.AddRule(LogLevel.Debug, LogLevel.Fatal, logFile);
             LogManager.Configuration = config;
 
             // creating an instance of core
@@ -68,10 +68,12 @@ namespace SQLModel.Tests
                 // add element to the table
                 session.Add(profile);
 
+                Assert.Equal(1, profile.Id);
+
                 // creating an instance of LoginsTable
                 var login = new LoginsTable()
                 {
-                    ProfileId = 1,
+                    ProfileId = profile.Id,
                 };
 
                 // add element to the table
@@ -133,7 +135,7 @@ namespace SQLModel.Tests
 
                 var login = new LoginsTable()
                 {
-                    ProfileId = 2,
+                    ProfileId = profile.Id,
                 };
 
                 await session.Add(login);
@@ -174,6 +176,16 @@ namespace SQLModel.Tests
                 await session.Delete(listLogins[0]);
                 await session.Delete(listProfiles[0]);
             }
+
+            //using (var session = await core.CreateAsyncSession())
+            //{
+            //    // SELECT SCOPE_IDENTITY()
+            //    using (var reader = await session.Execute("INSERT INTO profiles (Name, Description) VALUES ('Name', 'Description'); SELECT last_insert_rowid();"))
+            //    {
+            //        if (reader.Read())
+            //            log.Debug(reader.GetValue(0));
+            //    }
+            //}
         }
     }
 }
