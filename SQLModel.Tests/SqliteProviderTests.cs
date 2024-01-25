@@ -176,16 +176,6 @@ namespace SQLModel.Tests
                 await session.Delete(listLogins[0]);
                 await session.Delete(listProfiles[0]);
             }
-
-            //using (var session = await core.CreateAsyncSession())
-            //{
-            //    // SELECT SCOPE_IDENTITY()
-            //    using (var reader = await session.Execute("INSERT INTO profiles (Name, Description) VALUES ('Name', 'Description'); SELECT last_insert_rowid();"))
-            //    {
-            //        if (reader.Read())
-            //            log.Debug(reader.GetValue(0));
-            //    }
-            //}
         }
     }
 }
