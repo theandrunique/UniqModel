@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Data;
+using System.Diagnostics;
 using System.Linq;
 using System.Reflection;
 using System.Threading.Tasks;
@@ -91,15 +92,33 @@ namespace SQLModel
         }
         public static void Create(object newObject, Session session)
         {
-            string query = BuildCreateQuery(newObject);
-            session.ExecuteNonQuery(query);
+            string query = BuildCreateQuery(newObject, session.DbCore.GetLastInsertRowId());
+
+            using (var reader = session.Execute(query))
+            {
+                if (reader.Read())
+                {
+                    PrimaryKey key = Metadata.TableClasses[newObject.GetType()].PrimaryKeys[0];
+
+                    key.Property.SetValue(newObject, Convert.ChangeType(reader.GetValue(0), key.Property.PropertyType));
+                }
+            }
         }
         async public static Task CreateAsync(object newObject, AsyncSession session)
         {
-            string query = BuildCreateQuery(newObject);
-            await session.ExecuteNonQuery(query);
+            string query = BuildCreateQuery(newObject, session.DbCore.GetLastInsertRowId());
+
+            using (var reader = await session.Execute(query))
+            {
+                if (await session.ReadAsync(reader))
+                {
+                    PrimaryKey key = Metadata.TableClasses[newObject.GetType()].PrimaryKeys[0];
+
+                    key.Property.SetValue(newObject, Convert.ChangeType(reader.GetValue(0), key.Property.PropertyType));
+                }
+            }
         }
-        private static string BuildCreateQuery(object newObject)
+        private static string BuildCreateQuery(object newObject, string lastInsertRowId)
         {
             Type type = newObject.GetType(); // - class
 
@@ -109,7 +128,7 @@ namespace SQLModel
 
             string valueList = GetValues(table.FieldsRelation, newObject, false);
 
-            return $"INSERT INTO {table.Name} ({fieldList}) VALUES ({valueList});";
+            return $"INSERT INTO {table.Name} ({fieldList}) VALUES ({valueList}); {lastInsertRowId};";
         }
         private static string BuildUpdateQuery(object existedObject)
         {

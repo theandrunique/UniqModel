@@ -90,6 +90,10 @@ namespace SQLModel
             await ((SqliteDataReader)reader).CloseAsync();
 #endif
         }
+        public string GetLastInsertRowId()
+        {
+            return "SELECT last_insert_rowid()";
+        }
         public string GetAutoIncrementWithType()
         {
             return "INTEGER PRIMARY KEY AUTOINCREMENT";

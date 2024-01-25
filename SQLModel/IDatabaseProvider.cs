@@ -23,6 +23,7 @@ namespace SQLModel
         Task<bool> ReadAsync(IDataReader reader);
         bool Read(IDataReader reader);
         Task CloseReaderAsync(IDataReader reader);
+        string GetLastInsertRowId();
         string GetSqlType(Type type);
         string GetAutoIncrementWithType();
     }

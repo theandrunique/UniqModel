@@ -84,6 +84,10 @@ namespace SQLModel
             await ((SqlDataReader)reader).CloseAsync();
 #endif
         }
+        public string GetLastInsertRowId()
+        {
+            return "SELECT SCOPE_IDENTITY()";
+        }
         public string GetAutoIncrementWithType()
         {
             return "INT IDENTITY(1,1) PRIMARY KEY";

@@ -158,6 +158,10 @@ namespace SQLModel
         {
             await databaseProvider.CloseConnectionAsync(connection);
         }
+        public string GetLastInsertRowId()
+        {
+            return databaseProvider.GetLastInsertRowId();
+        }
         public static string GetSqlType(Type type)
         {
             return databaseProvider.GetSqlType(type);
