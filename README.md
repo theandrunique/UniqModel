@@ -39,7 +39,7 @@ class AccountTable : BaseModel
 }
 
 // Create an instance of Core
-Core dbcore = Core(DatabaseEngine.Sqlite, "Data Source=database.db");
+Core dbcore = new Core(DatabaseEngine.Sqlite, "Data Source=database.db");
 // Create a session
 // You should use a context manager
 using (Session session = dbcore.CreateSession())
