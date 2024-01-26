@@ -1,9 +1,11 @@
 ﻿using NLog;
 using System;
 using System.Data;
+using System.Linq;
+using System.Reflection;
 using System.Threading.Tasks;
 
-namespace SQLModel
+namespace UniqModel
 {
     public class Core
     {
@@ -28,7 +30,7 @@ namespace SQLModel
             metadata = new Metadata(this);
         }
         public Core(DatabaseEngine databaseEngine, string connectionString)
-            : this (databaseEngine, connectionString, null, false) { }
+            : this(databaseEngine, connectionString, null, false) { }
         public Core(DatabaseEngine databaseEngine, string connectionString, bool dropErrors)
             : this(databaseEngine, connectionString, null, dropErrors) { }
         public void SetupLogger(ILogger logger)
@@ -40,25 +42,39 @@ namespace SQLModel
             switch (databaseType)
             {
                 case DatabaseEngine.SqlServer:
-                    databaseProvider = new SqlServerDatabaseProvider();
+                    databaseProvider = LoadProvider("UniqModel.SqlServer.dll");
                     break;
                 //case DatabaseType.MySql:
                 //    databaseProvider = new MySqlDatabaseProvider(); // future
                 //    break;
                 case DatabaseEngine.Sqlite:
-                    databaseProvider = new SqliteDatabaseProvider();
+                    databaseProvider = LoadProvider("UniqModel.Sqlite.dll");
                     break;
                 default:
                     throw new ArgumentOutOfRangeException(nameof(databaseType), "Unsupported database type");
             }
         }
+        private IDatabaseProvider LoadProvider(string providerName)
+        {
+            Assembly assembly = Assembly.LoadFrom(providerName);
+
+            Type providerType = assembly.GetTypes()
+                .FirstOrDefault(t => typeof(IDatabaseProvider).IsAssignableFrom(t));
+
+            if (providerType != null)
+            {
+                return (IDatabaseProvider)Activator.CreateInstance(providerType);
+            }
+
+            throw new ArgumentException($"Provider '{providerName}' not supported.");
+        }
         public async Task<IDbConnection> OpenConnectionAsync()
         {
-            return await databaseProvider.OpenConnectionAsync(this.connectionString);
+            return await databaseProvider.OpenConnectionAsync(connectionString);
         }
         public IDbConnection OpenConnection()
         {
-            return databaseProvider.OpenConnection(this.connectionString);
+            return databaseProvider.OpenConnection(connectionString);
         }
         public IDataReader ExecuteQuery(string sql, IDbConnection connection, IDbTransaction transaction)
         {
@@ -187,7 +203,7 @@ namespace SQLModel
 
             try
             {
-                using (var session = this.CreateSession())
+                using (var session = CreateSession())
                 {
                     ExecuteEmptyQuery($"SELECT 1 FROM {tableName} WHERE 1=0", session.Connection, session.Transaction);
                 }
@@ -203,5 +219,11 @@ namespace SQLModel
                 Logging.IsEnabled = tempLogging;
             }
         }
+    }
+    internal class CoreImpl
+    {
+        public static IDatabaseProvider Provider { get; set; }
+        public string ConnectionString { get { return connectionString; } }
+        private string connectionString;
     }
 }

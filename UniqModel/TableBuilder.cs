@@ -2,24 +2,24 @@
 using System.Linq;
 using System.Reflection;
 
-namespace SQLModel
+namespace UniqModel
 {
     internal class TableBuilder
     {
         public static void CreateTable(Table table, Session session)
         {
-            string createTableQuery = TableBuilder.GenerateCreateTableQuery(table, session);
+            string createTableQuery = GenerateCreateTableQuery(table, session);
             session.ExecuteNonQuery(createTableQuery);
         }
         public static void CreateForeignKeys(Type typeTable, Core dbcore)
         {
-            if (dbcore.DatabaseProvider is SqliteDatabaseProvider)
-            {
-                throw new NotSupportedException("SqliteDatabaseProvider does not support creating foreign keys after creating tables");
-            }
+            //if (dbcore.DatabaseProvider is SqliteDatabaseProvider)
+            //{
+            //    throw new NotSupportedException("SqliteDatabaseProvider does not support creating foreign keys after creating tables");
+            //}
 
             Table table = Metadata.TableClasses[typeTable];
-            
+
             foreach (ForeignKey key in table.ForeignKeys)
             {
                 string query = GenerateAddForeignKeyQuery(table.Name, key);
@@ -41,7 +41,8 @@ namespace SQLModel
                 if (table.PrimaryKeys.Count < 2 && field.PrimaryKey)
                 {
                     createTableQuery += $"{field.Name} {session.DbCore.DatabaseProvider.GetAutoIncrementWithType()}, ";
-                } else
+                }
+                else
                 {
                     createTableQuery += $"{field.Name} {field.Type}, ";
                 }

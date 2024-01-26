@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Data;
 using System.Threading.Tasks;
 
-namespace SQLModel
+namespace UniqModel
 {
     public class AsyncSession : IDisposable
     {
@@ -77,7 +77,7 @@ namespace SQLModel
         {
             await Crud.DeleteAsync(existedObject, this);
         }
-        async public  Task<List<T>> GetAll<T>()
+        async public Task<List<T>> GetAll<T>()
         {
             return await Crud.GetAllAsync<T>(this);
         }

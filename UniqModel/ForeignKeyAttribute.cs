@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace SQLModel
+namespace UniqModel
 {
     [AttributeUsage(AttributeTargets.Property)]
     public class ForeignKeyAttribute : FieldAttribute

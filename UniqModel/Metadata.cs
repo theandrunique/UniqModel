@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 
-namespace SQLModel
+namespace UniqModel
 {
     public class Metadata
     {
@@ -99,7 +99,7 @@ namespace SQLModel
         }
         private bool CanBeCreated(Table table, HashSet<string> createdTables)
         {
-            foreach(var foreignKey in table.ForeignKeys)
+            foreach (var foreignKey in table.ForeignKeys)
             {
                 if (!createdTables.Contains(foreignKey.ReferenceTableName))
                 {

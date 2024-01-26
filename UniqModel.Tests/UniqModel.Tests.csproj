@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <TargetFramework>net6.0</TargetFramework>
@@ -23,7 +23,9 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\SQLModel\SQLModel.csproj" />
+    <ProjectReference Include="..\UniqModel\UniqModel.csproj" />
+	<ProjectReference Include="..\UniqModel.Sqlite\UniqModel.Sqlite.csproj" />
+	<ProjectReference Include="..\UniqModel.SqlServer\UniqModel.SqlServer.csproj" />
   </ItemGroup>
 
 </Project>

@@ -1,11 +1,12 @@
-﻿using System;
+﻿using System.Data.SqlClient;
 using System.Data;
-using System.Data.SqlClient;
 using System.Threading.Tasks;
+using System;
+using UniqModel;
 
-namespace SQLModel
+namespace UniqModel.SqlServer
 {
-    internal class SqlServerDatabaseProvider : IDatabaseProvider
+    public class SqlServerDatabaseProvider : IDatabaseProvider
     {
 #pragma warning disable CS1998
         async public Task<IDbConnection> OpenConnectionAsync(string connectionString)

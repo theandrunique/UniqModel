@@ -1,15 +1,12 @@
 ﻿using Microsoft.Data.Sqlite;
 using System;
-using System.Collections.Generic;
 using System.Data;
-using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
+using UniqModel;
 
-namespace SQLModel
+namespace UniqModel.Sqlite
 {
-
-    internal class SqliteDatabaseProvider : IDatabaseProvider
+    public class SqliteDatabaseProvider : IDatabaseProvider
     {
 #pragma warning disable CS1998
         public async Task<IDbConnection> OpenConnectionAsync(string connectionString)

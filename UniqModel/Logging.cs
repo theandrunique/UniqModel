@@ -1,6 +1,6 @@
 ﻿using NLog;
 
-namespace SQLModel
+namespace UniqModel
 {
     public class Logging
     {

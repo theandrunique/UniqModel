@@ -1,6 +1,6 @@
 ﻿using System.Data.SqlClient;
 
-namespace SQLModel
+namespace UniqModel
 {
     public enum DatabaseEngine
     {

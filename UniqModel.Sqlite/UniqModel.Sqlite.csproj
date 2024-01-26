@@ -1,0 +1,19 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+	  <PackageTags>orm;micro-orm;sql</PackageTags>
+	  <TargetFrameworks>net48;net5.0;net7.0</TargetFrameworks>
+	  <GeneratePackageOnBuild>True</GeneratePackageOnBuild>
+	  <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+	  <RepositoryUrl>https://github.com/theandrunique/dotnet_orm</RepositoryUrl>
+      <ImplicitUsings>disable</ImplicitUsings>
+  </PropertyGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\UniqModel\UniqModel.csproj" />
+    </ItemGroup>
+
+	<ItemGroup>
+		<PackageReference Include="Microsoft.Data.Sqlite" Version="2.2.0" />
+	</ItemGroup>
+</Project>

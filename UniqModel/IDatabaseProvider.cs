@@ -2,7 +2,7 @@
 using System.Data;
 using System.Threading.Tasks;
 
-namespace SQLModel
+namespace UniqModel
 {
     public interface IDatabaseProvider
     {

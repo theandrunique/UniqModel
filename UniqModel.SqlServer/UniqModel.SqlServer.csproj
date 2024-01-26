@@ -1,0 +1,20 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+	<PropertyGroup>
+		<PackageTags>orm;micro-orm;sql</PackageTags>
+		<TargetFrameworks>net48;net5.0;net7.0</TargetFrameworks>
+		<GeneratePackageOnBuild>True</GeneratePackageOnBuild>
+		<AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+		<RepositoryUrl>https://github.com/theandrunique/dotnet_orm</RepositoryUrl>
+		<ImplicitUsings>disable</ImplicitUsings>
+		<IsPublishable>True</IsPublishable>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<ProjectReference Include="..\UniqModel\UniqModel.csproj" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<PackageReference Include="System.Data.SqlClient" Version="4.8.5" />
+	</ItemGroup>
+</Project>

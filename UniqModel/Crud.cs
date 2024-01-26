@@ -6,7 +6,7 @@ using System.Linq;
 using System.Reflection;
 using System.Threading.Tasks;
 
-namespace SQLModel
+namespace UniqModel
 {
     internal static class Crud
     {
@@ -134,7 +134,7 @@ namespace SQLModel
 
             Logging.Info(query);
 
-            session.Connection.Execute(query, existedObject,  session.Transaction);
+            session.Connection.Execute(query, existedObject, session.Transaction);
         }
         private static string BuildDeleteQuery(object existedObject)
         {

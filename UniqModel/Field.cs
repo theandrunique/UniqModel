@@ -1,6 +1,6 @@
 ﻿using System.Reflection;
 
-namespace SQLModel
+namespace UniqModel
 {
     public class Field
     {

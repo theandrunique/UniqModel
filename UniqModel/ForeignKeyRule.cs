@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace SQLModel
+namespace UniqModel
 {
     public enum ForeignKeyRule
     {

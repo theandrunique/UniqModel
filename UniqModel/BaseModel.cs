@@ -1,6 +1,4 @@
-﻿
-
-namespace SQLModel
+﻿namespace UniqModel
 {
     public class BaseModel
     {

@@ -1,8 +1,10 @@
-﻿using System;
+﻿using Dapper;
+using System;
 using System.Collections.Generic;
 using System.Data;
+using System.Linq;
 
-namespace SQLModel
+namespace UniqModel
 {
     public class Session : IDisposable
     {
@@ -57,11 +59,14 @@ namespace SQLModel
         public void Commit()
         {
             dbcore.CommitTransaction(transaction);
+            expired = true;
             Logging.Info($"COMMIT");
         }
         public void Rollback()
         {
             transaction.Rollback();
+            expired = true;
+            Logging.Info($"ROLLBACK");
         }
         public T GetById<T>(int id)
         {
@@ -112,6 +117,14 @@ namespace SQLModel
                     throw;
                 return null;
             }
+        }
+        public IEnumerable<T> Query<T>(string sql, object param = null)
+        {
+            return conn.Query<T>(sql, param, transaction);
+        }
+        public T QueryFirstOrDefault<T>(string sql, object param = null)
+        {
+            return conn.QueryFirstOrDefault<T>(sql, param, transaction);
         }
         public void CheckIsExpired()
         {

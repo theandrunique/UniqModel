@@ -1,6 +1,6 @@
 ﻿using System.Reflection;
 
-namespace SQLModel
+namespace UniqModel
 {
     public class ForeignKey : Field
     {
@@ -8,10 +8,10 @@ namespace SQLModel
         public string ReferenceFieldName { get; }
         public string OnDeleteRule { get; }
         public string OnUpdateRule { get; }
-        public ForeignKey(ForeignKeyAttribute attribute, PropertyInfo property) 
+        public ForeignKey(ForeignKeyAttribute attribute, PropertyInfo property)
             : base(attribute, property, false, true)
         {
-            ReferenceTableName = attribute.ReferenceTableName; 
+            ReferenceTableName = attribute.ReferenceTableName;
             ReferenceFieldName = attribute.ReferenceFieldName;
             OnDeleteRule = attribute.OnDeleteRule;
             OnUpdateRule = attribute.OnUpdateRule;

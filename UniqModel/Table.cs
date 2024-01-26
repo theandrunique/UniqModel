@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Reflection;
 
-namespace SQLModel
+namespace UniqModel
 {
     public class Table
     {
@@ -17,7 +17,9 @@ namespace SQLModel
             if (tablenameValue == null)
             {
                 Name = table.Name;
-            } else {
+            }
+            else
+            {
                 Name = (string)tablenameValue.GetValue(null);
             }
 
@@ -51,9 +53,10 @@ namespace SQLModel
 
                         ForeignKeys.Add(newForeignKey);
 
-                        FieldsRelation[property] = newForeignKey; 
+                        FieldsRelation[property] = newForeignKey;
 
-                    } else if (fieldAttribute is FieldAttribute)
+                    }
+                    else if (fieldAttribute is FieldAttribute)
                     {
                         FieldsRelation[property] = new Field(fieldAttribute, property);
                     }
