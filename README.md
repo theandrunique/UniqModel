@@ -1,26 +1,35 @@
-# dotnet orm
+# UniqModel
 Improves code readability and removes basic queries from the code.
 ## Installing
-To install the library, you can use NuGet and find the library named [**theandru-dotnet-orm**](https://www.nuget.org/packages/theandru-dotnet-orm).
+To install the library, you can use NuGet and find the library named [**UniqModel**](https://www.nuget.org/packages/UniqModel/).
 
 ### .NET CLI
 ```
-dotnet add package theandru-dotnet-orm
+dotnet add package UniqModel
 ```
 
 ### Installation from source
 
 1. Clone the project
+
 ```
-git clone https://github.com/theandrunique/dotnet_orm.git
+git clone https://github.com/theandrunique/UniqModel.git
 ```
+
 2. Navigate to the directory
+
 ```
-cd dotnet_orm/
+cd UniqModel/
 ```
-3. Run the solution file **SQLModel.sln**
-4. Compile the library
-5. Add a link to the created binary file in you project
+3. Compile the library
+
+- Run the solution file **UniqModel.sln** and compile the library
+- or use .NET CLI to compile
+```
+dotnet build
+```
+
+4. Add a link to the created binary file in you project
 
 ## Usage
 
