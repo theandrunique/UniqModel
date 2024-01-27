@@ -7,35 +7,32 @@ namespace UniqModel
 {
     public class AsyncSession : IDisposable
     {
-        public Core DbCore { get { return dbcore; } }
-        public IDbConnection Connection { get { return conn; } }
-        public IDbTransaction Transaction { get { return transaction; } }
-        Core dbcore;
-        IDbConnection conn;
-        IDbTransaction transaction;
-        public bool Expired { get { return expired; } }
-        private bool expired;
+        public IDbConnection Connection { get { return _conn; } }
+        public IDbTransaction Transaction { get { return _transaction; } }
+        IDbConnection _conn;
+        IDbTransaction _transaction;
+        public bool Expired { get { return _expired; } }
+        private bool _expired;
 
-        List<IDataReader> readerPool = new List<IDataReader>();
-        public AsyncSession(Core dbcore)
+        List<IDataReader> _readerPool = new List<IDataReader>();
+        public AsyncSession() { }
+        async public static Task<AsyncSession> Create()
         {
-            this.dbcore = dbcore;
-        }
-        async public static Task<AsyncSession> Create(Core dbcore)
-        {
-            var asyncSession = new AsyncSession(dbcore);
+            var asyncSession = new AsyncSession();
 
-            IDbConnection conn = await dbcore.OpenConnectionAsync();
-            asyncSession.conn = conn;
+            asyncSession._conn = await CoreImpl.OpenConnectionAsync();
             try
             {
                 Logging.Info($"BEGIN (implicit)");
-                asyncSession.transaction = await dbcore.BeginTransactionAsync(conn);
+                asyncSession._transaction = await CoreImpl.BeginTransactionAsync(asyncSession._conn);
             }
             catch (Exception ex)
             {
                 Logging.Error($"Error occurred while starting the transaction. Details: {ex.Message}");
-                asyncSession.expired = true;
+                asyncSession._expired = true;
+                if (UniqSettings.DropErrors)
+                    throw;
+                return null;
             }
             return asyncSession;
         }
@@ -44,7 +41,7 @@ namespace UniqModel
             await CloseReaders();
             try
             {
-                if (dbcore.AutoCommit)
+                if (UniqSettings.AutoCommit)
                 {
                     await Commit();
                 }
@@ -52,22 +49,32 @@ namespace UniqModel
             catch (Exception ex)
             {
                 Logging.Info($"ROLLBACK ({ex.Message})");
-                throw;
+                if (UniqSettings.DropErrors)
+                    throw;
             }
             finally
             {
-                await dbcore.CloseConnectionAsync(conn);
-                expired = true;
+                try
+                {
+                    await CoreImpl.CloseConnectionAsync(_conn);
+                }
+                catch (Exception ex)
+                {
+                    Logging.Error($"Error occurred while closing the connection. Details: {ex.Message}");
+                    if (UniqSettings.DropErrors)
+                        throw;
+                }
+                _expired = true;
             }
         }
         public async Task Commit()
         {
-            await dbcore.CommitTransactionAsync(transaction);
+            await CoreImpl.CommitTransactionAsync(_transaction);
             Logging.Info($"COMMIT");
         }
         public async Task RollBack()
         {
-            transaction.Rollback();
+            _transaction.Rollback();
         }
         async public Task<T> GetById<T>(int id)
         {
@@ -89,55 +96,46 @@ namespace UniqModel
         {
             await Crud.CreateAsync(newObject, this);
         }
-        async public Task ExecuteNonQuery(string query)
+        async public Task Execute(string query, object param = null)
         {
-            CheckIsExpired();
             try
             {
-                await dbcore.ExecuteEmptyQueryAsync(query, conn, transaction);
+                await CoreImpl.ExecuteAsync(query, param, _conn, _transaction);
             }
             catch
             {
-                if (dbcore.DropErrors)
+                if (UniqSettings.DropErrors)
                     throw;
             }
         }
         async public Task<IDataReader> Execute(string query)
         {
-            CheckIsExpired();
             try
             {
                 await CloseReaders();
-                IDataReader reader = await dbcore.ExecuteQueryAsync(query, conn, transaction);
-                readerPool.Add(reader);
+                IDataReader reader = await CoreImpl.ExecuteQueryAsync(query, _conn, _transaction);
+                _readerPool.Add(reader);
                 return reader;
             }
             catch
             {
-                if (dbcore.DropErrors)
+                if (UniqSettings.DropErrors)
                     throw;
                 return null;
             }
         }
         async public Task<bool> ReadAsync(IDataReader reader)
         {
-            return await dbcore.ReadReaderAsync(reader);
-        }
-        public void CheckIsExpired()
-        {
-            if (expired)
-            {
-                throw new Exception("The session is closed or expired due to an exception");
-            }
+            return await CoreImpl.ReadReaderAsync(reader);
         }
         private async Task CloseReaders()
         {
-            foreach (IDataReader item in readerPool)
+            foreach (IDataReader item in _readerPool)
             {
                 if (!item.IsClosed)
-                    await dbcore.CloseReaderAsync(item);
+                    await CoreImpl.CloseReaderAsync(item);
             }
-            readerPool.Clear();
+            _readerPool.Clear();
         }
     }
 }

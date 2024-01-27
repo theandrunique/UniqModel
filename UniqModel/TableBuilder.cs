@@ -8,8 +8,8 @@ namespace UniqModel
     {
         public static void CreateTable(Table table, Session session)
         {
-            string createTableQuery = GenerateCreateTableQuery(table, session);
-            session.ExecuteNonQuery(createTableQuery);
+            string createTableQuery = GenerateCreateTableQuery(table);
+            session.Execute(createTableQuery);
         }
         public static void CreateForeignKeys(Type typeTable, Core dbcore)
         {
@@ -26,11 +26,11 @@ namespace UniqModel
 
                 using (var session = dbcore.CreateSession())
                 {
-                    session.ExecuteNonQuery(query);
+                    session.Execute(query);
                 }
             }
         }
-        private static string GenerateCreateTableQuery(Table table, Session session)
+        private static string GenerateCreateTableQuery(Table table)
         {
             string createTableQuery = $"CREATE TABLE {table.Name} (";
 
@@ -40,7 +40,7 @@ namespace UniqModel
 
                 if (table.PrimaryKeys.Count < 2 && field.PrimaryKey)
                 {
-                    createTableQuery += $"{field.Name} {session.DbCore.DatabaseProvider.GetAutoIncrementWithType()}, ";
+                    createTableQuery += $"{field.Name} {CoreImpl.GetAutoIncrementWithType()}, ";
                 }
                 else
                 {

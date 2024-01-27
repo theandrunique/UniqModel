@@ -22,7 +22,7 @@ namespace UniqModel
 
             if (attribute.ColumnType == null)
             {
-                Type = Core.GetSqlType(property.PropertyType);
+                Type = CoreImpl.GetSqlType(property.PropertyType);
             }
             else
             {

@@ -1,3 +1,4 @@
+using Microsoft.Data.Sqlite;
 using NLog;
 using NLog.Targets;
 using UniqModel;
@@ -112,10 +113,10 @@ namespace UniqModel.Tests
                 Assert.Equal("new description", listProfiles[0].Description);
 
                 // an error due to a foreign key constraint
-                //Assert.Throws<SqliteException>(() =>
-                //{
-                //    session.Delete(listProfiles[0]);
-                //});
+                Assert.Throws<SqliteException>(() =>
+                {
+                    session.Delete(listProfiles[0]);
+                });
 
                 session.Delete(listLogins[0]);
                 session.Delete(listProfiles[0]);
@@ -168,10 +169,10 @@ namespace UniqModel.Tests
                 Assert.Equal("new name", listProfiles[0].Name);
                 Assert.Equal("new description", listProfiles[0].Description);
 
-                //await Assert.ThrowsAsync<SqliteException>(async () =>
-                //{
-                //    await session.Delete(listProfiles[0]);
-                //});
+                await Assert.ThrowsAsync<SqliteException>(async () =>
+                {
+                    await session.Delete(listProfiles[0]);
+                });
 
                 await session.Delete(listLogins[0]);
                 await session.Delete(listProfiles[0]);

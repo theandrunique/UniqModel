@@ -8,31 +8,30 @@ namespace UniqModel
 {
     public class Session : IDisposable
     {
-        public Core DbCore { get { return dbcore; } }
-        public IDbConnection Connection { get { return conn; } }
-        public IDbTransaction Transaction { get { return transaction; } }
-        Core dbcore;
-        IDbConnection conn;
-        IDbTransaction transaction;
-        public bool Expired { get { return expired; } }
-        private bool expired;
+        public IDbConnection Connection { get { return _conn; } }
+        public IDbTransaction Transaction { get { return _transaction; } }
+        IDbConnection _conn;
+        IDbTransaction _transaction;
+        public bool Expired { get { return _expired; } }
+        private bool _expired;
 
-        List<IDataReader> readerPool = new List<IDataReader>();
-        public Session(Core dbcore)
+        List<IDataReader> _readerPool = new List<IDataReader>();
+        public Session()
         {
-            expired = false;
-            this.dbcore = dbcore;
-            conn = dbcore.OpenConnection();
+            _expired = false;
+            _conn = CoreImpl.OpenConnection();
             try
             {
                 Logging.Info($"BEGIN (implicit)");
 
-                transaction = dbcore.BeginTransaction(conn);
+                _transaction = CoreImpl.BeginTransaction(_conn);
             }
             catch (Exception ex)
             {
                 Logging.Error($"Error occurred while starting the transaction. Details: {ex.Message}");
-                expired = true;
+                _expired = true;
+                if (UniqSettings.DropErrors)
+                    throw;
             }
         }
         public void Dispose()
@@ -40,7 +39,7 @@ namespace UniqModel
             CloseReaders();
             try
             {
-                if (dbcore.AutoCommit)
+                if (UniqSettings.AutoCommit)
                 {
                     Commit();
                 }
@@ -48,24 +47,34 @@ namespace UniqModel
             catch (Exception ex)
             {
                 Logging.Info($"ROLLBACK ({ex.Message})");
-                throw;
+                if (UniqSettings.DropErrors)
+                    throw;
             }
             finally
             {
-                dbcore.CloseConnection(conn);
-                expired = true;
+                try
+                {
+                    CoreImpl.CloseConnection(_conn);
+                }
+                catch (Exception ex)
+                {
+                    Logging.Error($"Error occurred while closing the connection. Details: {ex.Message}");
+                    if (UniqSettings.DropErrors)
+                        throw;
+                }
+                _expired = true;
             }
         }
         public void Commit()
         {
-            dbcore.CommitTransaction(transaction);
-            expired = true;
+            CoreImpl.CommitTransaction(_transaction);
+            _expired = true;
             Logging.Info($"COMMIT");
         }
         public void Rollback()
         {
-            transaction.Rollback();
-            expired = true;
+            _transaction.Rollback();
+            _expired = true;
             Logging.Info($"ROLLBACK");
         }
         public T GetById<T>(int id)
@@ -88,59 +97,50 @@ namespace UniqModel
         {
             Crud.Create(newObject, this);
         }
-        public void ExecuteNonQuery(string query)
+        public void Execute(string query, object param = null)
         {
-            CheckIsExpired();
             try
             {
-                dbcore.ExecuteEmptyQuery(query, conn, transaction);
+                CoreImpl.Execute(query, param, _conn, _transaction);
             }
             catch
             {
-                if (dbcore.DropErrors)
+                if (UniqSettings.DropErrors)
                     throw;
             }
         }
         public IDataReader Execute(string query)
         {
-            CheckIsExpired();
             try
             {
                 CloseReaders();
-                IDataReader reader = dbcore.ExecuteQuery(query, conn, transaction);
-                readerPool.Add(reader);
+                IDataReader reader = CoreImpl.ExecuteQuery(query, _conn, _transaction);
+                _readerPool.Add(reader);
                 return reader;
             }
             catch
             {
-                if (dbcore.DropErrors)
+                if (UniqSettings.DropErrors)
                     throw;
                 return null;
             }
         }
         public IEnumerable<T> Query<T>(string sql, object param = null)
         {
-            return conn.Query<T>(sql, param, transaction);
+            return CoreImpl.Query<T>(_conn, sql, param, _transaction);
         }
         public T QueryFirstOrDefault<T>(string sql, object param = null)
         {
-            return conn.QueryFirstOrDefault<T>(sql, param, transaction);
-        }
-        public void CheckIsExpired()
-        {
-            if (expired)
-            {
-                throw new Exception("The session is closed or expired due to an exception");
-            }
+            return CoreImpl.QueryFirstOrDefault<T>(_conn, sql, param, _transaction);
         }
         private void CloseReaders()
         {
-            foreach (IDataReader item in readerPool)
+            foreach (IDataReader item in _readerPool)
             {
                 if (!item.IsClosed)
                     item.Close();
             }
-            readerPool.Clear();
+            _readerPool.Clear();
         }
     }
 }

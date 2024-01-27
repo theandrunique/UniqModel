@@ -1,5 +1,7 @@
-﻿using NLog;
+﻿using Dapper;
+using NLog;
 using System;
+using System.Collections.Generic;
 using System.Data;
 using System.Linq;
 using System.Reflection;
@@ -9,25 +11,19 @@ namespace UniqModel
 {
     public class Core
     {
-        public string ConnectionString { get { return connectionString; } }
-        private string connectionString;
-        private static IDatabaseProvider databaseProvider;
-        public IDatabaseProvider DatabaseProvider { get { return databaseProvider; } }
-        public Metadata Metadata { get { return metadata; } }
-        private Metadata metadata;
-        public bool DropErrors { get; set; }
-        public bool AutoCommit { get; set; } = true;
+        public string ConnectionString { get { return UniqSettings.ConnectionString; } }
+        public Metadata Metadata { get { return CoreImpl.Metadata; } }
         public Core(DatabaseEngine databaseEngine, string connectionString, ILogger logger, bool dropErrors)
         {
-            SelectProvider(databaseEngine);
+            CoreImpl.SelectProvider(databaseEngine);
 
-            this.connectionString = connectionString;
+            UniqSettings.ConnectionString = connectionString;
+            UniqSettings.DropErrors = dropErrors;
+            UniqSettings.AutoCommit = true;
 
             SetupLogger(logger);
 
-            DropErrors = dropErrors;
-
-            metadata = new Metadata(this);
+            CoreImpl.Metadata = new Metadata(this);
         }
         public Core(DatabaseEngine databaseEngine, string connectionString)
             : this(databaseEngine, connectionString, null, false) { }
@@ -37,24 +33,63 @@ namespace UniqModel
         {
             Logging.INIT(logger);
         }
-        private void SelectProvider(DatabaseEngine databaseType)
+        public Session CreateSession()
+        {
+            return new Session();
+        }
+        public async Task<AsyncSession> CreateAsyncSession()
+        {
+            return await AsyncSession.Create();
+        }
+        public bool TableExists(string tableName)
+        {
+            bool temp = UniqSettings.DropErrors;
+            UniqSettings.DropErrors = true;
+            bool tempLogging = Logging.IsEnabled;
+            Logging.IsEnabled = false;
+
+            try
+            {
+                using (var session = CreateSession())
+                {
+                    CoreImpl.Execute($"SELECT 1 FROM {tableName} WHERE 1=0", null, session.Connection, session.Transaction);
+                }
+                return true;
+            }
+            catch
+            {
+                return false;
+            }
+            finally
+            {
+                UniqSettings.DropErrors = temp;
+                Logging.IsEnabled = tempLogging;
+            }
+        }
+    }
+    internal class CoreImpl
+    {
+        private static IDatabaseProvider _provider { get; set; }
+        public static IDatabaseProvider Provider { get { return _provider; } }
+        public static Metadata Metadata { get; set; }
+        public static void SelectProvider(DatabaseEngine databaseType)
         {
             switch (databaseType)
             {
                 case DatabaseEngine.SqlServer:
-                    databaseProvider = LoadProvider("UniqModel.SqlServer.dll");
+                    _provider = LoadProvider("UniqModel.SqlServer.dll");
                     break;
                 //case DatabaseType.MySql:
                 //    databaseProvider = new MySqlDatabaseProvider(); // future
                 //    break;
                 case DatabaseEngine.Sqlite:
-                    databaseProvider = LoadProvider("UniqModel.Sqlite.dll");
+                    _provider = LoadProvider("UniqModel.Sqlite.dll");
                     break;
                 default:
                     throw new ArgumentOutOfRangeException(nameof(databaseType), "Unsupported database type");
             }
         }
-        private IDatabaseProvider LoadProvider(string providerName)
+        private static IDatabaseProvider LoadProvider(string providerName)
         {
             Assembly assembly = Assembly.LoadFrom(providerName);
 
@@ -68,162 +103,178 @@ namespace UniqModel
 
             throw new ArgumentException($"Provider '{providerName}' not supported.");
         }
-        public async Task<IDbConnection> OpenConnectionAsync()
+        public static IEnumerable<T> Query<T>(IDbConnection conn, string sql, object param = null, IDbTransaction transaction = null)
         {
-            return await databaseProvider.OpenConnectionAsync(connectionString);
-        }
-        public IDbConnection OpenConnection()
-        {
-            return databaseProvider.OpenConnection(connectionString);
-        }
-        public IDataReader ExecuteQuery(string sql, IDbConnection connection, IDbTransaction transaction)
-        {
-            IDbCommand command = databaseProvider.ExecuteCommand(sql, connection, transaction);
             try
             {
                 Logging.Info($"{sql}");
-
-                return databaseProvider.ExecuteReader(command);
+                return conn.Query<T>(sql, param, transaction);
             }
             catch (Exception ex)
             {
                 Logging.Error($"{sql} Details: {ex.Message}");
-                throw;
+                if (UniqSettings.DropErrors)
+                    throw;
+                return null;
             }
         }
-        async public Task<IDataReader> ExecuteQueryAsync(string sql, IDbConnection connection, IDbTransaction transaction)
+        public static async Task<IEnumerable<T>> QueryAsync<T>(IDbConnection conn, string sql, object param = null, IDbTransaction transaction = null)
         {
-            IDbCommand command = await databaseProvider.ExecuteCommandAsync(sql, connection, transaction);
             try
             {
                 Logging.Info($"{sql}");
-
-                return await databaseProvider.ExecuteReaderAsync(command);
+                return await conn.QueryAsync<T>(sql, param, transaction);
             }
             catch (Exception ex)
             {
                 Logging.Error($"{sql} Details: {ex.Message}");
-                throw;
+                if (UniqSettings.DropErrors)
+                    throw;
+                return null;
             }
         }
-        public void ExecuteEmptyQuery(string sql, IDbConnection connection, IDbTransaction transaction)
+        public static T QueryFirstOrDefault<T>(IDbConnection conn, string sql, object param = null, IDbTransaction transaction = null)
         {
-            using (IDbCommand command = databaseProvider.ExecuteCommand(sql, connection, transaction))
+            try
+            {
+                Logging.Info($"{sql}");
+                return conn.QueryFirstOrDefault<T>(sql, param, transaction);
+            }
+            catch (Exception ex)
+            {
+                Logging.Error($"{sql} Details: {ex.Message}");
+                if (UniqSettings.DropErrors)
+                    throw;
+                return default(T);
+            }
+        }
+        public static IDataReader ExecuteQuery(string sql, IDbConnection connection, IDbTransaction transaction)
+        {
+            using (IDbCommand command = _provider.ExecuteCommand(sql, connection, transaction))
             {
                 try
                 {
                     Logging.Info($"{sql}");
-                    databaseProvider.ExecuteNonQuery(command);
+
+                    return _provider.ExecuteReader(command);
                 }
                 catch (Exception ex)
                 {
                     Logging.Error($"{sql} Details: {ex.Message}");
-                    throw;
+                    if (UniqSettings.DropErrors)
+                        throw;
+                    return null;
                 }
             }
         }
-        async public Task ExecuteEmptyQueryAsync(string sql, IDbConnection connection, IDbTransaction transaction)
+        async public static Task<IDataReader> ExecuteQueryAsync(string sql, IDbConnection connection, IDbTransaction transaction)
         {
-            using (IDbCommand command = await databaseProvider.ExecuteCommandAsync(sql, connection, transaction))
+            using (IDbCommand command = await _provider.ExecuteCommandAsync(sql, connection, transaction))
             {
                 try
                 {
                     Logging.Info($"{sql}");
-                    await databaseProvider.ExecuteNonQueryAsync(command);
+
+                    return await _provider.ExecuteReaderAsync(command);
                 }
                 catch (Exception ex)
                 {
                     Logging.Error($"{sql} Details: {ex.Message}");
-                    throw;
+                    if (UniqSettings.DropErrors)
+                        throw;
+                    return null;
                 }
             }
         }
-        public IDbTransaction BeginTransaction(IDbConnection connection)
+        public static void Execute(string sql, object param, IDbConnection connection, IDbTransaction transaction)
         {
-            return databaseProvider.BeginTransaction(connection);
+            try
+            {
+                Logging.Info($"{sql}");
+                connection.Execute(sql, param, transaction);
+            }
+            catch (Exception ex)
+            {
+                Logging.Error($"{sql} Details: {ex.Message}");
+                if (UniqSettings.DropErrors)
+                    throw;
+            }
         }
-        public async Task<IDbTransaction> BeginTransactionAsync(IDbConnection connection)
+        async static public Task ExecuteAsync(string sql, object param, IDbConnection connection, IDbTransaction transaction)
         {
-            return await databaseProvider.BeginTransactionAsync(connection);
+            try
+            {
+                Logging.Info($"{sql}");
+                await connection.ExecuteAsync(sql, param, transaction);
+            }
+            catch (Exception ex)
+            {
+                Logging.Error($"{sql} Details: {ex.Message}");
+                if (UniqSettings.DropErrors)
+                    throw;
+            }
         }
-        public void CommitTransaction(IDbTransaction transaction)
+        public static async Task<IDbConnection> OpenConnectionAsync()
         {
-            databaseProvider.CommitTransaction(transaction);
+            return await _provider.OpenConnectionAsync(UniqSettings.ConnectionString);
         }
-        public async Task CommitTransactionAsync(IDbTransaction transaction)
+        public static IDbConnection OpenConnection()
         {
-            await databaseProvider.CommitTransactionAsync(transaction);
+            return _provider.OpenConnection(UniqSettings.ConnectionString);
         }
-        public bool ReadReader(IDataReader reader)
+        public static IDbTransaction BeginTransaction(IDbConnection connection)
         {
-            return databaseProvider.Read(reader);
+            return _provider.BeginTransaction(connection);
         }
-        public async Task<bool> ReadReaderAsync(IDataReader reader)
+        public static async Task<IDbTransaction> BeginTransactionAsync(IDbConnection connection)
         {
-            return await databaseProvider.ReadAsync(reader);
+            return await _provider.BeginTransactionAsync(connection);
         }
-        public async Task CloseReaderAsync(IDataReader reader)
+        public static void CommitTransaction(IDbTransaction transaction)
         {
-            await databaseProvider.CloseReaderAsync(reader);
+            _provider.CommitTransaction(transaction);
         }
-        public void CloseConnection(IDbConnection connection)
+        public static async Task CommitTransactionAsync(IDbTransaction transaction)
         {
-            databaseProvider.CloseConnection(connection);
+            await _provider.CommitTransactionAsync(transaction);
         }
-        public async Task CloseConnectionAsync(IDbConnection connection)
+        public static bool ReadReader(IDataReader reader)
         {
-            await databaseProvider.CloseConnectionAsync(connection);
+            return _provider.Read(reader);
         }
-        public string GetLastInsertRowId()
+        public static async Task<bool> ReadReaderAsync(IDataReader reader)
         {
-            return databaseProvider.GetLastInsertRowId();
+            return await _provider.ReadAsync(reader);
+        }
+        public static async Task CloseReaderAsync(IDataReader reader)
+        {
+            await _provider.CloseReaderAsync(reader);
+        }
+        public static void CloseConnection(IDbConnection connection)
+        {
+            _provider.CloseConnection(connection);
+        }
+        public static async Task CloseConnectionAsync(IDbConnection connection)
+        {
+            await _provider.CloseConnectionAsync(connection);
+        }
+        public static string GetLastInsertRowId()
+        {
+            return _provider.GetLastInsertRowId();
         }
         public static string GetSqlType(Type type)
         {
-            return databaseProvider.GetSqlType(type);
+            return _provider.GetSqlType(type);
         }
-        public string GetAutoIncrementWithType()
+        public static string GetAutoIncrementWithType()
         {
-            return databaseProvider.GetAutoIncrementWithType();
-        }
-        public Session CreateSession()
-        {
-            return new Session(this);
-        }
-        public async Task<AsyncSession> CreateAsyncSession()
-        {
-            return await AsyncSession.Create(this);
-        }
-        public bool TableExists(string tableName)
-        {
-            bool temp = DropErrors;
-            DropErrors = true;
-            bool tempLogging = Logging.IsEnabled;
-            Logging.IsEnabled = false;
-
-            try
-            {
-                using (var session = CreateSession())
-                {
-                    ExecuteEmptyQuery($"SELECT 1 FROM {tableName} WHERE 1=0", session.Connection, session.Transaction);
-                }
-                return true;
-            }
-            catch
-            {
-                return false;
-            }
-            finally
-            {
-                DropErrors = temp;
-                Logging.IsEnabled = tempLogging;
-            }
+            return _provider.GetAutoIncrementWithType();
         }
     }
-    internal class CoreImpl
+    public static class UniqSettings
     {
-        public static IDatabaseProvider Provider { get; set; }
-        public string ConnectionString { get { return connectionString; } }
-        private string connectionString;
+        public static bool DropErrors { get; set; }
+        public static bool AutoCommit { get; set; }
+        public static string ConnectionString { get; set; }
     }
 }

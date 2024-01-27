@@ -1,7 +1,5 @@
-﻿using Dapper;
-using System;
+﻿using System;
 using System.Collections.Generic;
-using System.Data;
 using System.Linq;
 using System.Reflection;
 using System.Threading.Tasks;
@@ -16,9 +14,7 @@ namespace UniqModel
 
             string query = BuildSelectQueryById(table);
 
-            Logging.Info(query);
-
-            return session.Connection.Query<T>(query, new { Id = id }, session.Transaction).FirstOrDefault();
+            return CoreImpl.QueryFirstOrDefault<T>(session.Connection, query, new { Id = id }, session.Transaction);
         }
         async public static Task<T> GetByIdAsync<T>(int id, AsyncSession session)
         {
@@ -28,7 +24,7 @@ namespace UniqModel
 
             Logging.Info(query);
 
-            return (await session.Connection.QueryAsync<T>(query, new { Id = id }, session.Transaction)).FirstOrDefault();
+            return (await CoreImpl.QueryAsync<T>(session.Connection, query, new { Id = id }, session.Transaction)).FirstOrDefault();
         }
         private static string MapFields(Table table)
         {
@@ -42,9 +38,7 @@ namespace UniqModel
         }
         private static string GetFields(Dictionary<PropertyInfo, Field> keyValuePairs)
         {
-            List<PropertyInfo> properties = keyValuePairs.Keys.ToList();
-
-            return string.Join(", ", properties.Select(property =>
+            return string.Join(", ", keyValuePairs.Keys.Select(property =>
             {
                 if (keyValuePairs[property].PrimaryKey)
                 {
@@ -56,11 +50,9 @@ namespace UniqModel
         }
         public static void Create(object newObject, Session session)
         {
-            string query = BuildCreateQuery(newObject, session.DbCore.GetLastInsertRowId());
+            string query = BuildCreateQuery(newObject, CoreImpl.GetLastInsertRowId());
 
-            Logging.Info(query);
-
-            int newObjectId = session.Connection.Query<int>(query, newObject, session.Transaction).FirstOrDefault();
+            int newObjectId = CoreImpl.QueryFirstOrDefault<int>(session.Connection, query, newObject, session.Transaction);
 
             PrimaryKey key = Metadata.TableClasses[newObject.GetType()].PrimaryKeys[0];
 
@@ -68,11 +60,9 @@ namespace UniqModel
         }
         async public static Task CreateAsync(object newObject, AsyncSession session)
         {
-            string query = BuildCreateQuery(newObject, session.DbCore.GetLastInsertRowId());
+            string query = BuildCreateQuery(newObject, CoreImpl.GetLastInsertRowId());
 
-            Logging.Info(query);
-
-            int newObjectId = (await session.Connection.QueryAsync<int>(query, newObject, session.Transaction)).FirstOrDefault();
+            int newObjectId = (await CoreImpl.QueryAsync<int>(session.Connection, query, newObject, session.Transaction)).FirstOrDefault();
 
             PrimaryKey key = Metadata.TableClasses[newObject.GetType()].PrimaryKeys[0];
 
@@ -100,9 +90,7 @@ namespace UniqModel
 
             Table table = Metadata.TableClasses[type];
 
-            List<PropertyInfo> properties = table.FieldsRelation.Keys.ToList();
-
-            string setClause = string.Join(", ", properties.Select(property =>
+            string setClause = string.Join(", ", table.FieldsRelation.Keys.Select(property =>
             {
                 Field field = table.FieldsRelation[property];
 
@@ -124,17 +112,13 @@ namespace UniqModel
         {
             string query = BuildUpdateQuery(existedObject);
 
-            Logging.Info(query);
-
-            await session.Connection.ExecuteAsync(query, existedObject, session.Transaction);
+            await CoreImpl.ExecuteAsync(query, existedObject, session.Connection, session.Transaction);
         }
         public static void Update(object existedObject, Session session)
         {
             string query = BuildUpdateQuery(existedObject);
 
-            Logging.Info(query);
-
-            session.Connection.Execute(query, existedObject, session.Transaction);
+            CoreImpl.Execute(query, existedObject, session.Connection, session.Transaction);
         }
         private static string BuildDeleteQuery(object existedObject)
         {
@@ -152,17 +136,13 @@ namespace UniqModel
         {
             string query = BuildDeleteQuery(existedObject);
 
-            Logging.Info(query);
-
-            session.Connection.Execute(query, existedObject, session.Transaction);
+            CoreImpl.Execute(query, existedObject, session.Connection, session.Transaction);
         }
         async public static Task DeleteAsync(object existedObject, AsyncSession session)
         {
             string query = BuildDeleteQuery(existedObject);
 
-            Logging.Info(query);
-
-            await session.Connection.ExecuteAsync(query, existedObject, session.Transaction);
+            await CoreImpl.ExecuteAsync(query, existedObject, session.Connection, session.Transaction);
         }
         private static string BuildSelectAllQuery<T>()
         {
@@ -176,9 +156,7 @@ namespace UniqModel
         {
             string query = BuildSelectAllQuery<T>();
 
-            Logging.Info(query);
-
-            List<T> list = session.Connection.Query<T>(query, null, session.Transaction).ToList();
+            List<T> list = CoreImpl.Query<T>(session.Connection, query, null, session.Transaction).ToList();
 
             return list;
         }
@@ -186,9 +164,7 @@ namespace UniqModel
         {
             string query = BuildSelectAllQuery<T>();
 
-            Logging.Info(query);
-
-            List<T> list = (await session.Connection.QueryAsync<T>(query, null, session.Transaction)).ToList();
+            List<T> list = (await CoreImpl.QueryAsync<T>(session.Connection, query, null, session.Transaction)).ToList();
 
             return list;
         }
