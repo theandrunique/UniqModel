@@ -22,8 +22,6 @@ namespace UniqModel
 
             string query = BuildSelectQueryById(table);
 
-            Logging.Info(query);
-
             return (await CoreImpl.QueryAsync<T>(session.Connection, query, new { Id = id }, session.Transaction)).FirstOrDefault();
         }
         private static string MapFields(Table table)

@@ -51,7 +51,9 @@ namespace UniqModel.Tests
             LogManager.Configuration = config;
 
             // creating an instance of core
-            Core core = new Core(DatabaseEngine.Sqlite, "Data Source=test.db", log, dropErrors: true);
+            Core core = new Core(DatabaseEngine.Sqlite, "Data Source=test.db", log, true, dropErrors: true);
+
+            UniqSettings.ShowValuesInLog = true;
 
             // creating tables
             core.Metadata.CreateAll();

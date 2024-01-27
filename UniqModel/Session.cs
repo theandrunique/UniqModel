@@ -2,7 +2,6 @@
 using System;
 using System.Collections.Generic;
 using System.Data;
-using System.Linq;
 
 namespace UniqModel
 {
@@ -109,7 +108,7 @@ namespace UniqModel
                     throw;
             }
         }
-        public IDataReader Execute(string query)
+        public IDataReader ExecuteReader(string query)
         {
             try
             {

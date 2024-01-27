@@ -108,7 +108,7 @@ namespace UniqModel
                     throw;
             }
         }
-        async public Task<IDataReader> Execute(string query)
+        async public Task<IDataReader> ExecuteReader(string query)
         {
             try
             {

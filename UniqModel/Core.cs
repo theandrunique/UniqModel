@@ -13,7 +13,7 @@ namespace UniqModel
     {
         public string ConnectionString { get { return UniqSettings.ConnectionString; } }
         public Metadata Metadata { get { return CoreImpl.Metadata; } }
-        public Core(DatabaseEngine databaseEngine, string connectionString, ILogger logger, bool dropErrors)
+        public Core(DatabaseEngine databaseEngine, string connectionString, ILogger logger, bool debagLog, bool dropErrors)
         {
             CoreImpl.SelectProvider(databaseEngine);
 
@@ -21,17 +21,42 @@ namespace UniqModel
             UniqSettings.DropErrors = dropErrors;
             UniqSettings.AutoCommit = true;
 
-            SetupLogger(logger);
+            if (logger != null)
+            {
+                Logging.INIT(logger);
+                UniqSettings.Logging = true;
+                if (debagLog == true)
+                {
+                    UniqSettings.ShowValuesInLog = true;
+                }
+            }
+            SelectExecutor();
 
             CoreImpl.Metadata = new Metadata(this);
         }
+        public Core(DatabaseEngine databaseEngine, string connectionString, ILogger logger, bool dropErrors) 
+            : this(databaseEngine, connectionString, logger, false, dropErrors) { }
         public Core(DatabaseEngine databaseEngine, string connectionString)
             : this(databaseEngine, connectionString, null, false) { }
         public Core(DatabaseEngine databaseEngine, string connectionString, bool dropErrors)
             : this(databaseEngine, connectionString, null, dropErrors) { }
-        public void SetupLogger(ILogger logger)
+        private void SelectExecutor()
         {
-            Logging.INIT(logger);
+            if (UniqSettings.Logging)
+            {
+                if (UniqSettings.ShowValuesInLog)
+                {
+                    CoreImpl.QueryExecutor = new QueryExecutorWithDebugLogs();
+                }
+                else
+                {
+                    CoreImpl.QueryExecutor = new QueryExecutorWithLogs();
+                }
+            }
+            else
+            {
+                CoreImpl.QueryExecutor = new QueryExecutor();
+            }
         }
         public Session CreateSession()
         {
@@ -72,6 +97,7 @@ namespace UniqModel
         private static IDatabaseProvider _provider { get; set; }
         public static IDatabaseProvider Provider { get { return _provider; } }
         public static Metadata Metadata { get; set; }
+        public static IQueryExecutor QueryExecutor { get; set; }
         public static void SelectProvider(DatabaseEngine databaseType)
         {
             switch (databaseType)
@@ -105,52 +131,19 @@ namespace UniqModel
         }
         public static IEnumerable<T> Query<T>(IDbConnection conn, string sql, object param = null, IDbTransaction transaction = null)
         {
-            try
-            {
-                Logging.Info($"{sql}");
-                return conn.Query<T>(sql, param, transaction);
-            }
-            catch (Exception ex)
-            {
-                Logging.Error($"{sql} Details: {ex.Message}");
-                if (UniqSettings.DropErrors)
-                    throw;
-                return null;
-            }
+            return QueryExecutor.Query<T>(sql, param, conn, transaction);
         }
         public static async Task<IEnumerable<T>> QueryAsync<T>(IDbConnection conn, string sql, object param = null, IDbTransaction transaction = null)
         {
-            try
-            {
-                Logging.Info($"{sql}");
-                return await conn.QueryAsync<T>(sql, param, transaction);
-            }
-            catch (Exception ex)
-            {
-                Logging.Error($"{sql} Details: {ex.Message}");
-                if (UniqSettings.DropErrors)
-                    throw;
-                return null;
-            }
+            return await QueryExecutor.QueryAsync<T>(sql, param, conn, transaction);
         }
         public static T QueryFirstOrDefault<T>(IDbConnection conn, string sql, object param = null, IDbTransaction transaction = null)
         {
-            try
-            {
-                Logging.Info($"{sql}");
-                return conn.QueryFirstOrDefault<T>(sql, param, transaction);
-            }
-            catch (Exception ex)
-            {
-                Logging.Error($"{sql} Details: {ex.Message}");
-                if (UniqSettings.DropErrors)
-                    throw;
-                return default(T);
-            }
+            return QueryExecutor.QueryFirstOrDefault<T>(sql, param, conn, transaction);
         }
-        public static IDataReader ExecuteQuery(string sql, IDbConnection connection, IDbTransaction transaction)
+        public static IDataReader ExecuteQuery(string sql, IDbConnection conn, IDbTransaction transaction)
         {
-            using (IDbCommand command = _provider.ExecuteCommand(sql, connection, transaction))
+            using (IDbCommand command = _provider.ExecuteCommand(sql, conn, transaction))
             {
                 try
                 {
@@ -167,9 +160,9 @@ namespace UniqModel
                 }
             }
         }
-        async public static Task<IDataReader> ExecuteQueryAsync(string sql, IDbConnection connection, IDbTransaction transaction)
+        async public static Task<IDataReader> ExecuteQueryAsync(string sql, IDbConnection conn, IDbTransaction transaction)
         {
-            using (IDbCommand command = await _provider.ExecuteCommandAsync(sql, connection, transaction))
+            using (IDbCommand command = await _provider.ExecuteCommandAsync(sql, conn, transaction))
             {
                 try
                 {
@@ -186,33 +179,13 @@ namespace UniqModel
                 }
             }
         }
-        public static void Execute(string sql, object param, IDbConnection connection, IDbTransaction transaction)
+        public static void Execute(string sql, object param, IDbConnection conn, IDbTransaction transaction)
         {
-            try
-            {
-                Logging.Info($"{sql}");
-                connection.Execute(sql, param, transaction);
-            }
-            catch (Exception ex)
-            {
-                Logging.Error($"{sql} Details: {ex.Message}");
-                if (UniqSettings.DropErrors)
-                    throw;
-            }
+            QueryExecutor.Execute(sql, param, conn, transaction);
         }
         async static public Task ExecuteAsync(string sql, object param, IDbConnection connection, IDbTransaction transaction)
         {
-            try
-            {
-                Logging.Info($"{sql}");
-                await connection.ExecuteAsync(sql, param, transaction);
-            }
-            catch (Exception ex)
-            {
-                Logging.Error($"{sql} Details: {ex.Message}");
-                if (UniqSettings.DropErrors)
-                    throw;
-            }
+            await QueryExecutor.ExecuteAsync(sql, param, connection, transaction);
         }
         public static async Task<IDbConnection> OpenConnectionAsync()
         {
@@ -271,10 +244,285 @@ namespace UniqModel
             return _provider.GetAutoIncrementWithType();
         }
     }
+    internal interface IQueryExecutor
+    {
+        IEnumerable<T> Query<T>(string sql, object param, IDbConnection conn,  IDbTransaction transaction);
+        Task<IEnumerable<T>> QueryAsync<T>(string sql, object param, IDbConnection conn, IDbTransaction transaction);
+        T QueryFirstOrDefault<T>(string sql, object param, IDbConnection conn, IDbTransaction transaction);
+        void Execute(string sql, object param, IDbConnection connection, IDbTransaction transaction);
+        Task ExecuteAsync(string sql, object param, IDbConnection connection, IDbTransaction transaction);
+    }
+    internal class QueryExecutor : IQueryExecutor
+    {
+        public IEnumerable<T> Query<T>(string sql, object param, IDbConnection conn, IDbTransaction transaction)
+        {
+            try
+            {
+                return conn.Query<T>(sql, param, transaction);
+            }
+            catch
+            {
+                if (UniqSettings.DropErrors)
+                    throw;
+                return null;
+            }
+        }
+        public async Task<IEnumerable<T>> QueryAsync<T>(string sql, object param, IDbConnection conn, IDbTransaction transaction)
+        {
+            try
+            {
+                return await conn.QueryAsync<T>(sql, param, transaction);
+            }
+            catch
+            {
+                if (UniqSettings.DropErrors)
+                    throw;
+                return null;
+            }
+        }
+        public T QueryFirstOrDefault<T>(string sql, object param, IDbConnection conn, IDbTransaction transaction)
+        {
+            try
+            {
+                return conn.QueryFirstOrDefault<T>(sql, param, transaction);
+            }
+            catch
+            {
+                if (UniqSettings.DropErrors)
+                    throw;
+                return default(T);
+            }
+        }
+        public void Execute(string sql, object param, IDbConnection connection, IDbTransaction transaction)
+        {
+            try
+            {
+                connection.Execute(sql, param, transaction);
+            }
+            catch
+            {
+                if (UniqSettings.DropErrors)
+                    throw;
+            }
+        }
+        async public Task ExecuteAsync(string sql, object param, IDbConnection connection, IDbTransaction transaction)
+        {
+            try
+            {
+                await connection.ExecuteAsync(sql, param, transaction);
+            }
+            catch (Exception ex)
+            {
+                if (UniqSettings.DropErrors)
+                    throw;
+            }
+        }
+    }
+    internal class QueryExecutorWithLogs : IQueryExecutor
+    {
+        public IEnumerable<T> Query<T>(string sql, object param, IDbConnection conn, IDbTransaction transaction)
+        {
+            try
+            {
+                Logging.Info($"{sql}");
+
+                return conn.Query<T>(sql, param, transaction);
+            }
+            catch (Exception ex)
+            {
+                Logging.Error($"{sql} Details: {ex.Message}");
+                if (UniqSettings.DropErrors)
+                    throw;
+                return null;
+            }
+        }
+        public async Task<IEnumerable<T>> QueryAsync<T>(string sql, object param, IDbConnection conn, IDbTransaction transaction)
+        {
+            try
+            {
+                Logging.Info($"{sql}");
+
+                return await conn.QueryAsync<T>(sql, param, transaction);
+            }
+            catch (Exception ex)
+            {
+                Logging.Error($"{sql} Details: {ex.Message}");
+                if (UniqSettings.DropErrors)
+                    throw;
+                return null;
+            }
+        }
+        public T QueryFirstOrDefault<T>(string sql, object param, IDbConnection conn, IDbTransaction transaction)
+        {
+            try
+            {
+                Logging.Info($"{sql}");
+
+                return conn.QueryFirstOrDefault<T>(sql, param, transaction);
+            }
+            catch (Exception ex)
+            {
+                Logging.Error($"{sql} Details: {ex.Message}");
+                if (UniqSettings.DropErrors)
+                    throw;
+                return default(T);
+            }
+        }
+        public void Execute(string sql, object param, IDbConnection connection, IDbTransaction transaction)
+        {
+            try
+            {
+                Logging.Info($"{sql}");
+
+                connection.Execute(sql, param, transaction);
+            }
+            catch (Exception ex)
+            {
+                Logging.Error($"{sql} Details: {ex.Message}");
+                if (UniqSettings.DropErrors)
+                    throw;
+            }
+        }
+        async public Task ExecuteAsync(string sql, object param, IDbConnection connection, IDbTransaction transaction)
+        {
+            try
+            {
+                Logging.Info($"{sql}");
+
+                await connection.ExecuteAsync(sql, param, transaction);
+            }
+            catch (Exception ex)
+            {
+                Logging.Error($"{sql} Details: {ex.Message}");
+                if (UniqSettings.DropErrors)
+                    throw;
+            }
+        }
+    }
+    internal class QueryExecutorWithDebugLogs : IQueryExecutor
+    {
+        private string GetParamString(object param)
+        {
+            if (param == null)
+                return string.Empty;
+
+            var properties = param.GetType().GetProperties();
+
+            var keyValuePairs = properties.Select(p => $"{p.Name}={p.GetValue(param)}");
+
+            return string.Join(", ", keyValuePairs);
+        }
+        public IEnumerable<T> Query<T>(string sql, object param, IDbConnection conn,  IDbTransaction transaction)
+        {
+            try
+            {
+                Logging.Info($"{sql}");
+                string paramStr = GetParamString(param);
+                if (!string.IsNullOrEmpty(paramStr))
+                {
+                    Logging.Debug($"({paramStr})");
+                }
+
+                return conn.Query<T>(sql, param, transaction);
+            }
+            catch (Exception ex)
+            {
+                Logging.Error($"{sql} Details: {ex.Message}");
+                if (UniqSettings.DropErrors)
+                    throw;
+                return null;
+            }
+        }
+        public async Task<IEnumerable<T>> QueryAsync<T>(string sql, object param, IDbConnection conn, IDbTransaction transaction)
+        {
+            try
+            {
+                Logging.Info($"{sql}");
+                string paramStr = GetParamString(param);
+                if (!string.IsNullOrEmpty(paramStr))
+                {
+                    Logging.Debug($"({paramStr})");
+                }
+
+                return await conn.QueryAsync<T>(sql, param, transaction);
+            }
+            catch (Exception ex)
+            {
+                Logging.Error($"{sql} Details: {ex.Message}");
+                if (UniqSettings.DropErrors)
+                    throw;
+                return null;
+            }
+        }
+        public T QueryFirstOrDefault<T>(string sql, object param, IDbConnection conn, IDbTransaction transaction)
+        {
+            try
+            {
+                Logging.Info($"{sql}");
+                string paramStr = GetParamString(param);
+                if (!string.IsNullOrEmpty(paramStr))
+                {
+                    Logging.Debug($"({paramStr})");
+                }
+
+                return conn.QueryFirstOrDefault<T>(sql, param, transaction);
+            }
+            catch (Exception ex)
+            {
+                Logging.Error($"{sql} Details: {ex.Message}");
+                if (UniqSettings.DropErrors)
+                    throw;
+                return default(T);
+            }
+        }
+        public void Execute(string sql, object param, IDbConnection connection, IDbTransaction transaction)
+        {
+            try
+            {
+                Logging.Info($"{sql}");
+                string paramStr = GetParamString(param);
+                if (!string.IsNullOrEmpty(paramStr))
+                {
+                    Logging.Debug($"({paramStr})");
+                }
+
+                connection.Execute(sql, param, transaction);
+            }
+            catch (Exception ex)
+            {
+                Logging.Error($"{sql} Details: {ex.Message}");
+                if (UniqSettings.DropErrors)
+                    throw;
+            }
+        }
+        async public Task ExecuteAsync(string sql, object param, IDbConnection connection, IDbTransaction transaction)
+        {
+            try
+            {
+                Logging.Info($"{sql}");
+                string paramStr = GetParamString(param);
+                if (!string.IsNullOrEmpty(paramStr))
+                {
+                    Logging.Debug($"({paramStr})");
+                }
+
+                await connection.ExecuteAsync(sql, param, transaction);
+            }
+            catch (Exception ex)
+            {
+                Logging.Error($"{sql} Details: {ex.Message}");
+                if (UniqSettings.DropErrors)
+                    throw;
+            }
+        }
+    }
+
     public static class UniqSettings
     {
-        public static bool DropErrors { get; set; }
-        public static bool AutoCommit { get; set; }
+        public static bool DropErrors { get; set; } = true;
+        public static bool AutoCommit { get; set; } = true;
         public static string ConnectionString { get; set; }
+        public static bool ShowValuesInLog { get; set; } = false;
+        public static bool Logging { get; set; } = false;
     }
 }
