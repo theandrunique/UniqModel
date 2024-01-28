@@ -35,6 +35,4 @@ jobs:
     - name: Publish the package to GPR
       run: |
         dotnet nuget push UniqModel/bin/Release/*.nupkg --source https://api.nuget.org/v3/index.json --skip-duplicate --api-key ${{secrets.NUGET_API_KEY}}
-        dotnet nuget push UniqModel.SqlServer/bin/Release/*.nupkg --source https://api.nuget.org/v3/index.json --skip-duplicate --api-key ${{secrets.NUGET_API_KEY}} --version $(cat UniqModel.SqlServer/version.md)
-        dotnet nuget push UniqModel.Sqlite/bin/Release/*.nupkg --source https://api.nuget.org/v3/index.json --skip-duplicate --api-key ${{secrets.NUGET_API_KEY}} --version $(cat UniqModel.Sqlite/version.md)
       
