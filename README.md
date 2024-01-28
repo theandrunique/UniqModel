@@ -13,13 +13,13 @@ dotnet add package UniqModel
 1. Clone the project
 
 ```
-git clone https://github.com/theandrunique/UniqModel.git
+git clone https://github.com/theandrunique/uniqmodel.git
 ```
 
 2. Navigate to the directory
 
 ```
-cd UniqModel/
+cd uniqmodel/
 ```
 3. Compile the library
 
