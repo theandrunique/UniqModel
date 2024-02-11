@@ -6,12 +6,13 @@
 	  <GeneratePackageOnBuild>True</GeneratePackageOnBuild>
 	  <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
 	  <RepositoryUrl>https://github.com/theandrunique/dotnet_orm</RepositoryUrl>
-      <ImplicitUsings>disable</ImplicitUsings>
+	  <ImplicitUsings>disable</ImplicitUsings>
+	  <Version>1.0.1</Version>
   </PropertyGroup>
 
-    <ItemGroup>
-        <ProjectReference Include="..\UniqModel\UniqModel.csproj" />
-    </ItemGroup>
+	<ItemGroup>
+		<ProjectReference Include="..\UniqModel\UniqModel.csproj" />
+	</ItemGroup>
 
 	<ItemGroup>
 		<PackageReference Include="Microsoft.Data.Sqlite" Version="2.2.0" />

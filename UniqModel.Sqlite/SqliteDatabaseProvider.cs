@@ -2,7 +2,6 @@
 using System;
 using System.Data;
 using System.Threading.Tasks;
-using UniqModel;
 
 namespace UniqModel.Sqlite
 {

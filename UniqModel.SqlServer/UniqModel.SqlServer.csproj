@@ -8,10 +8,11 @@
 		<RepositoryUrl>https://github.com/theandrunique/dotnet_orm</RepositoryUrl>
 		<ImplicitUsings>disable</ImplicitUsings>
 		<IsPublishable>True</IsPublishable>
+		<Version>1.0.1</Version>
 	</PropertyGroup>
 
 	<ItemGroup>
-		<ProjectReference Include="..\UniqModel\UniqModel.csproj" />
+		<ProjectReference Include="..\UniqModel\UniqModel.csproj"/>
 	</ItemGroup>
 
 	<ItemGroup>

@@ -6,6 +6,7 @@
     <GeneratePackageOnBuild>True</GeneratePackageOnBuild>
 	<AllowUnsafeBlocks>true</AllowUnsafeBlocks>
 	<RepositoryUrl>https://github.com/theandrunique/dotnet_orm</RepositoryUrl>
+	<Version>0.1.0</Version>
   </PropertyGroup>
 
   <ItemGroup>
