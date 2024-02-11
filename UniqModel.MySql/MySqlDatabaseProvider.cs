@@ -85,7 +85,7 @@ namespace UniqModel.MySql
         }
         public string GetLastInsertRowId()
         {
-            return "SELECT LAST_INSERT_ID();";
+            return "SELECT LAST_INSERT_ID()";
         }
         public string GetAutoIncrementWithType()
         {
