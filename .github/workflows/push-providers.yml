@@ -21,7 +21,4 @@ jobs:
       run: dotnet test UniqModel.Tests/UniqModel.Tests.csproj -c Release --verbosity normal
     - name: Publish the packages
       run: |
-        echo "VersionPrefix=$(cat UniqModel.SqlServer/version.md)" >> $GITHUB_ENV
-        dotnet nuget push UniqModel.SqlServer/bin/Release/*.nupkg --source https://api.nuget.org/v3/index.json --skip-duplicate --api-key ${{secrets.NUGET_API_KEY}}
-        echo "VersionPrefix=$(cat UniqModel.Sqlite/version.md)" >> $GITHUB_ENV
-        dotnet nuget push UniqModel.Sqlite/bin/Release/*.nupkg --source https://api.nuget.org/v3/index.json --skip-duplicate --api-key ${{secrets.NUGET_API_KEY}}
+        dotnet nuget push UniqModel.SqlServer/bin/Release/*.nupkg UniqModel.Sqlite/bin/Release/*.nupkg UniqModel.MySql/bin/Release/*.nupkg --source https://api.nuget.org/v3/index.json --skip-duplicate --api-key ${{secrets.NUGET_API_KEY}}
