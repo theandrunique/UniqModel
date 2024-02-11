@@ -105,11 +105,11 @@ namespace UniqModel
                 case DatabaseEngine.SqlServer:
                     _provider = LoadProvider("UniqModel.SqlServer.dll");
                     break;
-                //case DatabaseType.MySql:
-                //    databaseProvider = new MySqlDatabaseProvider(); // future
-                //    break;
                 case DatabaseEngine.Sqlite:
                     _provider = LoadProvider("UniqModel.Sqlite.dll");
+                    break;
+                case DatabaseEngine.MySql:
+                    _provider = LoadProvider("UniqModel.MySql.dll");
                     break;
                 default:
                     throw new ArgumentOutOfRangeException(nameof(databaseType), "Unsupported database type");

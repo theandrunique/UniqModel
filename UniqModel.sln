@@ -14,6 +14,8 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "UniqModel.Sqlite", "UniqMod
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "UniqModel.SqlServer", "UniqModel.SqlServer\UniqModel.SqlServer.csproj", "{BBA01816-8593-4537-BA3B-1B6A888D008F}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "UniqModel.MySql", "UniqModel.MySql\UniqModel.MySql.csproj", "{15C43CC0-4FEC-43DF-9324-7032E8278E03}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -36,6 +38,10 @@ Global
 		{BBA01816-8593-4537-BA3B-1B6A888D008F}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{BBA01816-8593-4537-BA3B-1B6A888D008F}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{BBA01816-8593-4537-BA3B-1B6A888D008F}.Release|Any CPU.Build.0 = Release|Any CPU
+		{15C43CC0-4FEC-43DF-9324-7032E8278E03}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{15C43CC0-4FEC-43DF-9324-7032E8278E03}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{15C43CC0-4FEC-43DF-9324-7032E8278E03}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{15C43CC0-4FEC-43DF-9324-7032E8278E03}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
